@@ -5,6 +5,9 @@
   display: grid; place-items: center;
   background: var(--bg);
   transition: background 700ms;
+  /* The board is sized from this box rather than from a guess about how much
+     of the window the console has taken. See the note on `--c` below. */
+  container-type: size;
 }
 .scene::after {
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
@@ -23,15 +26,30 @@
 
 .board {
   position: relative; z-index: 2;
-  /* Whole pixels, deliberately. A fractional tile size puts every tile boundary
+  /* One tile, from the box the board is actually standing in.
+     ------------------------------------------------------------------
+     This used to read `(100dvh - 366px) / var(--h)` — the height of the
+     window, less a constant standing in for the gamebar and the console. The
+     constant does not scale, so the share of the window it claimed grew as the
+     window got shorter: 43% of an 844px portrait phone, and 94% of the same
+     phone turned sideways, which left the board four pixels a tile. Below
+     366px of window it went *negative*, `width: calc(w * -4px)` is an invalid
+     declaration, and the board and every absolutely-positioned tile in it fell
+     back to `auto`. Landscape was not squashed; it was broken.
+     `.scene` is a size container, so `cqh` is the height that is genuinely
+     left over — measured, in every orientation, with no arithmetic about what
+     else is on screen. `max()` is the floor that stops it reaching zero.
+
+     Whole pixels, deliberately. A fractional tile size puts every tile boundary
      and every sprite on a fractional pixel, and the floors layer — which sits
      under a filter and so rasterises on its own — snaps to the grid while the
      robot and the items above it do not. The result is a drift of up to a pixel
      that changes as he moves. The unrounded value stays as a fallback for
      engines without round(). */
-  --c: min(66px, calc((100vw - 56px) / var(--w)), calc((100dvh - 366px) / var(--h)));
-  --c: round(down, min(66px, calc((100vw - 56px) / var(--w)),
-                       calc((100dvh - 366px) / var(--h))), 1px);
+  --c: max(14px, min(66px, calc((100cqw - 24px) / var(--w)),
+                     calc((100cqh - 16px) / var(--h))));
+  --c: round(down, max(14px, min(66px, calc((100cqw - 24px) / var(--w)),
+                                 calc((100cqh - 16px) / var(--h)))), 1px);
   width: calc(var(--w) * var(--c));
   height: calc(var(--h) * var(--c));
   transform:

@@ -5,6 +5,12 @@
 .editor {
   position: relative; height: 100dvh; overflow: hidden; color: var(--chalk);
   display: grid; grid-template-rows: auto 1fr auto auto auto;
+  /* `minmax(0, …)`, not `1fr`: an auto grid column is as wide as its widest
+     item, and the tools row — five brushes, play and keep — is wider than a
+     small phone. The column stretched to fit it and everything in it inherited
+     the overflow, the grid included, once the grid started measuring the box
+     it is in rather than the window. Constrain the column and the row wraps. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px; padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
   background: var(--bg);
 }
@@ -17,14 +23,52 @@
    what lets landscape move all three at once without portrait noticing. */
 .erail { display: contents; }
 
-.canvas { display: grid; place-items: center; min-height: 0; }
+/* ---- turned sideways ----
+   The same move the console makes (`console.css`): everything that is not the
+   grid goes beside it, so the grid gets the height back. Before this the
+   editor's own constant — `100dvh - 340px` — left a sideways phone about seven
+   pixels a cell, which is smaller than the fingertip drawing on it. */
+@media (orientation: landscape) and (max-height: 620px) {
+  .editor {
+    grid-template-rows: auto 1fr;
+    grid-template-columns: minmax(0, 1fr) min(40vw, 300px);
+    padding-left: calc(14px + env(safe-area-inset-left));
+    padding-right: calc(14px + env(safe-area-inset-right));
+  }
+  .editor .roomsbar { grid-column: 1 / -1; }
+  .canvas { grid-column: 1; grid-row: 2; }
+  .erail {
+    display: grid; grid-column: 2; grid-row: 2;
+    align-content: center; justify-items: center; gap: 10px;
+    /* the last resort, and it should never be reached: a control a child
+       cannot get to is worse than a rail that scrolls */
+    min-height: 0; overflow-y: auto;
+  }
+  /* five brushes will not sit in one row of a 320px rail, so they sit in two,
+     and the four arrow counts pair up rather than leaving one on its own */
+  .erail .paints { display: grid; grid-template-columns: repeat(3, auto); }
+  .erail .trayedit { display: grid; grid-template-columns: repeat(2, auto); }
+  .erail .tools { gap: 10px; }
+  /* A sideways phone is ~360px tall and the rail has to hold all of it. Every
+     target stays well over the 44px a thumb needs; what goes is the air. */
+  .erail .paint { width: 46px; height: 46px; border-radius: 13px; }
+  .erail .play { width: 54px; height: 54px; }
+  .erail .keep { width: 46px; height: 46px; border-radius: 13px; }
+  .erail .tchip { width: 28px; height: 28px; border-radius: 9px; }
+  .erail .trayslot button { width: 24px; height: 28px; }
+}
+
+/* a size container, so the grid can be told how much room it has rather than
+   working it out from a constant — see the long note on `--c` in world.css */
+.canvas { display: grid; place-items: center; min-height: 0; container-type: size; }
 /* `egrid`, not `grid`: the level select already owns `.grid` for its tile
    layout, and two screens can be in the DOM together during a cross-fade. */
 .egrid {
   position: relative;
-  --gc: min(52px, calc((100vw - 44px) / var(--gw)), calc((100dvh - 340px) / var(--gh)));
-  --gc: round(down, min(52px, calc((100vw - 44px) / var(--gw)),
-                        calc((100dvh - 340px) / var(--gh))), 1px);
+  --gc: max(14px, min(52px, calc((100cqw - 16px) / var(--gw)),
+                      calc((100cqh - 12px) / var(--gh))));
+  --gc: round(down, max(14px, min(52px, calc((100cqw - 16px) / var(--gw)),
+                                  calc((100cqh - 12px) / var(--gh)))), 1px);
   /* the board's tiles are placed with --c, so the editor simply supplies one */
   --c: var(--gc);
   width: calc(var(--gw) * var(--gc));
@@ -76,8 +120,11 @@
 .egrid .gearspin i { width: 100%; height: 32%; background: #6f7683; }
 .egrid .gearspin::after { inset: 22%; background: #f6f2e8; box-shadow: 0 0 0 3px #6f7683; }
 
-.tools { display: flex; align-items: center; justify-content: center; gap: 14px; }
-.paints { display: flex; gap: 8px; }
+.tools {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; flex-wrap: wrap;
+}
+.paints { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .paint {
   width: 54px; height: 54px; border: 0; border-radius: 15px; padding: 0;
   background: var(--console2); box-shadow: 0 4px 0 #0e1117, inset 0 1px 0 #ffffff1a;

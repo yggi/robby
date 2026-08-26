@@ -158,7 +158,42 @@ check('camera starts pulled back', $('.board')?.style.getPropertyValue('--z') ==
 // because the floors layer rasterises on its own and snaps to the grid
 check('tiles are a whole number of pixels', /--c:\s*round\(down,/.test(raw))
 check('with a fallback for engines without round()',
-  (raw.match(/--c:\s*min\(66px/g) || []).length >= 1)
+  (raw.match(/--c:\s*max\(14px,\s*min\(66px/g) || []).length >= 1)
+
+/**
+ * The board and the editor grid are sized from the box they are standing in,
+ * not from a constant standing in for everything else on screen.
+ *
+ * That constant is why landscape was unplayable: `100dvh - 366px` is 43% of a
+ * tall window and 94% of a short one, and under ~366px of window it went
+ * negative, which is an invalid declaration — the board and every tile in it
+ * fell back to `auto`. This scrapes every rule that defines a tile size and
+ * fails if any of them goes back to subtracting from the viewport.
+ */
+const sizers = raw.match(/--(?:c|gc):\s*round\(down,[^;]+;/g) || []
+check(`tile sizes were found at all (${sizers.length} rules)`, sizers.length === 2)
+check(`no tile size is a guess about the rest of the screen (${sizers.length} checked)`,
+  sizers.every((r) => /100cq[wh]/.test(r) && !/100dvh|100vh|100vw/.test(r)))
+check(`and none of them can reach zero (${sizers.length} checked)`,
+  sizers.every((r) => /max\(\d+px,/.test(r)))
+check('the boxes they measure are size containers',
+  /\.scene\{[^}]*container-type:size/.test(raw) && /\.canvas\{[^}]*container-type:size/.test(raw))
+
+/**
+ * Sideways, the console stands beside the board rather than under it. Nothing
+ * here can be *seen* — jsdom lays nothing out — so this asserts the rule exists
+ * and says what it must say. It catches the rule going away, which is the
+ * regression worth catching; `doc/NOTES.md` carries the thread about what a
+ * check like this cannot do.
+ */
+const sideways = raw.match(/@media[^{]*orientation:landscape[^{]*\{[\s\S]*?\n?/g) || []
+check(`a landscape layout exists at all (${sideways.length} blocks)`, sideways.length === 2)
+check('the console moves to a column of its own', /\.console\{[^}]*grid-column:2/.test(raw))
+check('and so does the editor\'s rail', /\.erail\{[^}]*grid-column:2/.test(raw))
+check('the board keeps the row it is left with',
+  /\.screen\.ingame>\.scene\{grid-column:1;grid-row:2\}/.test(raw))
+check('and the notch is handled on the sides, not just top and bottom',
+  /safe-area-inset-right/.test(raw) && /safe-area-inset-left/.test(raw))
 check('a home button leads back out', !!$('.gamebar .ghostbtn'))
 
 // ---- the thought bubble, at rest ----
@@ -569,13 +604,49 @@ check('no clipping rule targets the console tray or its tokens',
 // the stylesheet only: the bundle below it is full of things that look like
 // selectors to a regex and are not
 const sheet = raw.slice(raw.search(/<style[^>]*>/), raw.indexOf('</style>'))
-const rules = [...sheet.matchAll(/(?:^|[{}])\s*([.#][^{}@]{2,90}?)\{/g)]
-  .map((m) => m[1].replace(/\s+/g, ' ').trim())
-  .filter((sel) => !sel.includes(':'))
-const repeated = [...new Set(rules.filter((sel, i) => rules.indexOf(sel) !== i))]
+
+/**
+ * Cut the sheet into scopes — the top level, and each `@media` body — because
+ * *within* one scope a repeated selector is the fault above, and *across* two
+ * it is the whole point of a media query. Read flat, the landscape layout
+ * looked like eight stale blocks.
+ */
+function scopes(css) {
+  const inner = []
+  let top = ''
+  for (let i = 0; i < css.length; ) {
+    if (!css.startsWith('@media', i)) { top += css[i++]; continue }
+    const open = css.indexOf('{', i)
+    let depth = 1
+    let j = open + 1
+    while (j < css.length && depth) {
+      if (css[j] === '{') depth++
+      else if (css[j] === '}') depth--
+      j++
+    }
+    inner.push(css.slice(open + 1, j - 1))
+    i = j
+  }
+  return [top, ...inner]
+}
+
+const selectorsIn = (css) =>
+  [...css.matchAll(/(?:^|[{}])\s*([.#][^{}@]{2,90}?)\{/g)]
+    .map((m) => m[1].replace(/\s+/g, ' ').trim())
+    .filter((sel) => !sel.includes(':'))
+
+const cuts = scopes(sheet)
+const rules = cuts.flatMap(selectorsIn)
+const repeated = [...new Set(
+  cuts.flatMap((cut) => {
+    const sels = selectorsIn(cut)
+    return sels.filter((sel, i) => sels.indexOf(sel) !== i)
+  }),
+)]
 // a check that finds nothing is worse than no check
 check('the stylesheet was actually found', rules.length > 200)
-check(`no selector is defined twice (${rules.length} rules)`, repeated.length === 0)
+check(`its media queries were found too (${cuts.length - 1} of them)`, cuts.length - 1 === 3)
+check(`no selector is defined twice in one scope (${rules.length} rules)`, repeated.length === 0)
 if (repeated.length) console.log('     defined twice:', repeated.slice(0, 8).join(' | '))
 
 /**
