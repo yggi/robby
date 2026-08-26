@@ -32,8 +32,15 @@ that, not as context by default.
   in front of anybody with the link, which is the point of it, and worth
   knowing before pushing something half-finished.
 
-CI runs `npm run check:full`, so a branch that does not pass both suites does
-not get published. Run it before pushing rather than finding out in the log.
+CI gates the publish, and the two cases differ:
+
+- **branches** run `npm test` — vitest, the build, the fast smoke pass. Seconds.
+- **`main`** runs `npm run check:full`, which adds the behavioural suite.
+
+So a branch preview can be published without the behavioural suite ever having
+run against it. That is deliberate — a preview is for iterating on — and it
+makes merging to `main` the real gate. Run `npm run check:full` yourself before
+proposing a merge, rather than discovering it there.
 
 ## The two rules that outrank everything else
 

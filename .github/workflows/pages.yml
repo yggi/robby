@@ -66,16 +66,27 @@ jobs:
 
       - run: npm ci
 
-      # `check:full` is vitest, then the build, then both smoke suites — every
-      # par in the game re-derived from the solver, and levels played through in
-      # jsdom. README calls test:full "opt-in, run it before shipping"; putting a
-      # build in front of children is shipping, and CI is where the two minutes
-      # nobody wants to wait for locally are free.
+      # `main` gets `check:full` — vitest, the build, and both smoke suites,
+      # every par re-derived from the solver and levels played through in jsdom.
+      # It is the build handed to a child at the site root, and README's rule is
+      # to run the behavioural suite before shipping.
       #
-      # It also leaves `dist/` exactly as the smoke suites found it, so what gets
+      # Branches get `npm test` — vitest, the build, the fast smoke pass. A
+      # branch build is a preview you are iterating on, and the suites are split
+      # precisely so the ten-second one can run on every change. Note the trade
+      # this accepts: a branch can publish a build whose behavioural suite never
+      # ran. That is fine for a preview, and it is why merging to `main` is the
+      # gate — nothing reaches the root without the full pass.
+      #
+      # Either way `dist/` is left exactly as the suites found it, so what gets
       # published is the artefact that was tested, not a rebuild of it.
       - name: Check
-        run: npm run check:full
+        run: |
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            npm run check:full
+          else
+            npm test
+          fi
 
       - name: Publish
         run: scripts/publish.sh put "$GITHUB_REF_NAME" dist
