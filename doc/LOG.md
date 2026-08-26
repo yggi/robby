@@ -17,6 +17,139 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — open up the editor, and make landscape an orientation
+
+Cards: [R-003] closed. [R-005] half-answered and rewritten. [R-030] and [R-031]
+opened from what was measured.
+
+Seven asks from one session with the game on a phone, six of them about the
+editor and one about the orientation it was held in.
+
+**Landscape was broken, not squashed.** `.board` and `.egrid` each sized a tile
+by subtracting a constant from the window height — `100dvh - 366px`,
+`100dvh - 340px` — standing in for the gamebar and the console. A constant does
+not scale: 43% of an 844px portrait window, **94%** of the same phone turned
+sideways. Below ~366px of window it went negative, and `width: calc(w * -4px)`
+is an invalid declaration, so the board *and every absolutely-positioned tile
+in it* fell back to `auto`. There was not one orientation query in the repo.
+Both now measure — `.scene` and `.canvas` are `container-type: size` and the
+sizes come off `100cqw`/`100cqh` with a `max()` floor — and on short landscape
+windows the console stands beside the board rather than under it, the editor's
+tray/tools/themes likewise as a rail. The rail is held by a wrapper that is
+`display: contents` in portrait, so portrait's rows are untouched.
+
+**Two bugs fell out of that.** The editor's grid column was `auto`, so it
+stretched to the tools row — five brushes, play and keep are wider than a 390px
+phone — and once the grid measured its own box instead of the window it
+inherited the overflow. `minmax(0, 1fr)` and a wrapping tools row fix a
+clipping that was already shipping. And `viewport-fit=cover` was set with only
+top and bottom insets handled, so a notch ate the console sideways.
+
+**Robby left `Draft.cells`.** He was a map character, which is why `paint()` had
+to refuse his tile — painting him would have deleted him. `Draft.start` holds
+him now. Three things stopped being special cases: the floor under him paints,
+moving him no longer writes bare floor over the tile he was on (it did, silently
+eating a conveyor every time), and he can be put down anywhere including a wall,
+which the room *says* rather than refusing the drop. The save format did not
+move: `draftMap()` writes `R` back at `start`, and a room only saves when the
+ground under him is plain floor, so the character it replaces is the `.` it
+already means. `draftFrom()` is the inverse, and replacing the one hand-written
+copy of it in `game.svelte.ts` fixed a live bug — editing a saved room was
+dropping its tray.
+
+**The gesture grammar came from the ask, verbatim, and it is better than what
+was there.** Hold to pick a thing up, leave the tile to draw a trail, tap to
+paint — and a tap turns a conveyor or changes an object only under the tool that
+made it. What that buys: terrain became terrain. Belts and bridges used to be
+carryable, not by decision but by accident of `grab` being "anything that is not
+`#` or `.`", and the cost of that was that **no brush could overdraw one** — a
+press picked it up instead. Nothing is committed on `pointerdown` any more; the
+press starts a timer and records the origin, and which of the three gestures it
+was is only knowable later.
+
+Mid-gesture the grid renders `move(draft, from, hover)` — the draft the release
+will produce — rather than a second rendering path that has to agree with the
+first. That is what makes the carried piece ride under the finger. Dragging
+Robby used to move nothing at all: `.lifted` dimmed the tile and he stayed put.
+
+**The battery brush is an object brush.** One button walking a ring — battery,
+cog, coil, core, rocket — cycled by tapping the tool tile it already is, which
+also gives a conveyor its direction *before* it is painted rather than after
+three taps on the grid. `goalFor()` derives the goal from the room and is asked
+by both `assess()` and `playable()`; had only the first asked, a saved errand
+room would have come back a collect room and been played at a par that is not
+true. Two battery-only assumptions went with it: the editor rendered
+`item === 'battery'` and nothing else, so a cog in a draft parsed, changed the
+answer and **drew nothing**, and `itemIcon()` now holds the ternary all three
+callers were writing out.
+
+**The verdict left the bar and went into Robby's thought bubble.** It was an
+English sentence — "needs robot and battery" — under the grid of the one game
+whose brief is that the player cannot read. Four states, each a thing shown:
+thinking, nothing to fetch, not on solid ground, no way through. `Verdict`'s
+`needs: string[]` went with the bar that printed it. Only the par stays a
+number, and that is for the adult. The bubble is the same `.think` he thinks in
+while playing, sized off `--c`, which the editor already supplies.
+
+**The rocket's refusal is a frame now.** Arriving short was a complete no-op in
+the engine — `satisfied()` returned false and he drove across — so the shudder
+the view already had (520ms×2) was cut off by the next 380ms step. A `denied`
+`FrameEvent`, set on the arrival frame, holds it for 900ms; `DUR` is
+`Record<FrameEvent, number>` so the compiler demanded the duration, and `tick()`
+looks a frame's sound up by name, so `sfx.denied` wired itself and the ad-hoc
+`if (shortHanded) sfx.denied()` in `Board.svelte` could be deleted. No outcome
+changes, so no shipped par moved — which is the acceptance test, and it is run
+on every suite. Measured in Chromium: the pad now turns him away for 1825ms.
+
+**The whole 9×7 is editable.** `inside()` reserved a wall border, leaving a 7×5
+interior that nothing on screen distinguished from a paintable one. Renamed to
+`within()` so a caller wanting the old meaning fails to compile.
+
+### What was measured rather than assumed
+
+The solver cost of opening the ring, because open space is what makes `solve()`
+expensive and the editor solves on every finished stroke:
+
+| wide-open room | `assess()` |
+|---|---|
+| 9×7 (the editor's size) | **650–770ms** |
+| 9×9 | 917ms |
+| 11×7 | 1175ms |
+| 11×9 (`MAX_W`×`MAX_H`) | **2547ms** |
+
+The dedup on world state is what stops it exploding — the frontier is bounded by
+distinct states, not by 4^depth. 9×7 is fine behind the spinner the editor
+already shows. **11×9 is not**, and `MAX_W`/`MAX_H` permit it today, which is
+[R-005]'s real constraint and is now written into the test that fails on it.
+
+### Rejected, and why
+
+- **Free pixel-following for the carried piece.** Cell-snapping is honest to a
+  tile game, needs no second positioning system, and re-uses `--x`/`--y`/`--c`
+  like everything else on the board. The piece is visibly under the finger
+  either way.
+- **Refusing to drop Robby on a wall.** A refused drop is a thing that has to be
+  explained; a room that says *he is not standing on anything* is a thing that
+  can be seen. Same argument as the red outline over the bin.
+- **A wider landscape rail (44vw).** Tried, to stop the save button wrapping to
+  its own line at 640px. It cost the grid 40px and the button wrapped anyway.
+
+### Two things a check could not have told us
+
+`git checkout` on one file, to undo a planted fault, took the whole rewrite of
+`Editor.svelte` with it — the plant had been applied on top of uncommitted work.
+Rewritten from context, but the lesson is cheap: **plant faults on a committed
+tree, or with a copy beside you.** The two plants either side of it used `cp` to
+a scratch file and cost nothing.
+
+And the duplicate-selector guard read the stylesheet flat, so the first
+landscape block looked like eight stale blocks. It cuts the sheet into scopes
+now — top level, and each `@media` body — because *within* a scope a repeated
+selector is still the fault it was written for, proven by planting one.
+
+287 → **302** unit tests, 199 → **226** fast checks, **145** full. Driven in
+Chromium at 390×844, 844×390 and 640×360.
+
 ## 2026-08-26 — end the collision category
 
 Cards: [R-013], [R-010] and [R-026] closed. [R-023] closed on the way past.

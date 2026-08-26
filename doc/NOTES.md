@@ -13,18 +13,33 @@ stale: resolve, promote or delete, back to 100 or below in one pass.
 
 ## The editor turned out to be the game
 
-Shipped as "a first slice" — floor, wall, battery, bridge, conveyor, a fixed 9×7
-grid, undo only from the toolbar. It is the thing that gets used, and it is used
+Shipped as "a first slice". It is the thing that gets used, and it is used
 *between people*: Emilia and her father build rooms for each other to solve
 (`doc/design/game/playtest.md`). An adult building with belts and bridges makes
 rooms that are a real challenge for older children, so the ceiling is far above
-the shipped curve.
+the shipped curve. It can now place every objective and the rocket, so a built
+room can be about *order* — the thing World 4 is about.
 
 The thread is not *which piece to add next* — those are cards. It is what the
 editor **is**, now that it is the main surface: a toy inside the game, or the
 game's other half with its own progression, its own rooms-you-have-solved, its
 own way of handing a room to somebody. That answer decides whether sharing is a
 URL feature or a shape the whole thing takes.
+
+## The editor's gestures grew a clock, and the vocabulary has not caught up
+
+`doc/design/feel/ux-patterns.md` says *grab what is under your finger*, and it
+meant it literally: a press picked a thing up, immediately. It cannot any more,
+because the same press has to be able to mean *paint over it* — the tool now
+decides, and the tool is only knowable at release. So the press starts a 260ms
+timer, and a hold picks up.
+
+That is the first gesture in the game with a **duration** in it, and the same
+document argues against exactly this shape elsewhere ("no bin, no long-press").
+The defence is that the piece lifts visibly the instant the timer fires, so the
+hold teaches itself and nothing is hidden behind it. Unknown whether 260ms is
+right for a four-year-old's finger, or whether a child who has learnt the old
+press even notices. Worth watching before it is written down as settled.
 
 ## Test World ships, and nobody decided that it should
 

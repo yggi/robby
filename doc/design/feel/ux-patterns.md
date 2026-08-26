@@ -5,13 +5,22 @@ would otherwise have to make on the game's behalf.
 
 ## Grab what is under your finger
 
-In the editor: press bare ground and you **paint**; press a piece and you
-**carry** it. A press that does not move is a **tap**, which turns a conveyor.
+In the editor, the thing under your finger and the tool in your hand decide
+together what a gesture means — and only the release can tell you which it was.
+Press and **hold** a thing to lift it. Leave the tile you pressed and you have
+drawn a **trail**. Lift without moving and it is a **tap**, which paints — or,
+where the chosen tool is the one that made what is under it, turns a conveyor or
+changes an object into the next kind along.
 
-One vocabulary, no modes, no tool switching for the commonest actions. There is
-no "select tool" step, because the thing under the finger already says what the
-gesture means. This is the pattern that made the editor usable by a five-year-old
-who had never been shown it.
+One vocabulary, four gestures, no modes and no confirmation. Nothing is decided
+on the way down, which is what lets the same press mean *carry this* and *paint
+over this* without asking.
+
+The hold is the one gesture in the game with a clock in it, and it earns that by
+being visible: the piece lifts and rides under the finger the instant it fires,
+so the hold teaches itself. It exists because the alternative was worse —
+carrying on press meant **no brush could ever overdraw a piece**, so conveyors
+and bridges were undeletable by accident of the rule rather than by decision.
 
 ## Drag it off the edge to throw it away
 
@@ -43,7 +52,9 @@ loop.
   moment into the strip where the thinking is
   ([`../game/thesis.md`](../game/thesis.md)).
 - The **thought bubble** says what is still needed, and ticks it off the moment
-  it is picked up.
+  it is picked up. It is also how a **half-built room** says what is wrong with
+  it — nothing to fetch, no ground under him, no way through — because the
+  alternative was a sentence, and the player cannot read one.
 
 Nothing anywhere returns a grade, a star count or a time. The par exists, is
 derived by the solver, and is shown as something to reach rather than something

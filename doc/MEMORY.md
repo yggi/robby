@@ -188,6 +188,20 @@ as the robot moves.
 The editor works by supplying its own `--c`, which is why it renders with the
 board's real tiles rather than a set of its own.
 
+**`--c` is measured, never assumed.** `.scene` and `.canvas` are
+`container-type: size`, and the tile comes off `100cqw`/`100cqh` — the room the
+board genuinely has — with a `max()` floor. It used to subtract a constant from
+`100dvh` standing in for the console and the gamebar, which is 43% of a tall
+window and 94% of a short one; below ~366px of window it went negative, and an
+invalid `width` took the board and every tile in it back to `auto`. **Do not
+put a viewport unit back into that formula**; a smoke check scrapes both rules
+and fails if one appears.
+
+**Landscape reflows rather than shrinking.** On short landscape windows the
+console stands beside the scene and the editor's tray, tools and themes become a
+rail — held by a wrapper that is `display: contents` in portrait, so portrait's
+rows are untouched. Nothing changes size; the furniture stands on its end.
+
 ## 8. Persistence
 
 Five keys in `localStorage`, all guarded by try/catch (jsdom refuses them on an

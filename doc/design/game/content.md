@@ -72,14 +72,31 @@ does not delete built rooms**. Progress is the game's; the rooms are theirs.
 Shipped as a first slice, and it is the thing people actually use
 ([`playtest.md`](playtest.md)).
 
-**Has:** floor, wall, battery, bridge, conveyor. Painting by drag, carrying a
-piece by pressing it, turning a conveyor by tapping it, throwing a piece away by
-dragging it off the edge. A live verdict: it solves the draft on every finished
-stroke and draws the solved route on the room as you build.
+**Has:** floor, wall, bridge, conveyor, and an **object** brush that walks a
+ring — battery, cog, coil, core, rocket — so a built room can require several
+parts *and then* the rocket, which is what makes it about order. All 63 cells of
+the 9×7 are paintable, the outer ring included.
 
-**Has not:** gates and plates, one-ways, keys, parts beyond a single battery,
-multi-objective and rocket goals, any grid size other than 9×7, and undo from
-anywhere but the toolbar.
+**One gesture grammar, and the tool decides what a tap means:**
+
+| gesture | what happens |
+|---|---|
+| press, then leave the tile | a **trail**, from the pressed tile onward |
+| press and hold on a thing | **lift it** — drag to move, let go off the edge to throw it away |
+| tap where the tool made what is under it | **cycle** it: a conveyor turns, an object changes kind |
+| tap anywhere else | **paint** that tile |
+
+Tapping a tool tile that is *already* chosen walks its ring too, so a conveyor
+is aimed before it is painted rather than turned three times afterwards.
+
+The verdict is live — it solves the draft on every finished stroke and draws the
+route on the room as you build — and it is **in Robby's thought bubble**, not in
+a sentence: thinking, nothing to fetch, not on solid ground, no way through.
+Only the par is a number, and that is for the adult. He can be dropped anywhere,
+a wall included; the room says so rather than refusing the drop.
+
+**Has not:** gates and plates, one-ways, keys, any grid size other than 9×7, and
+undo from anywhere but the toolbar.
 
 Everything in that second list is a card, and they are the top of the board.
 

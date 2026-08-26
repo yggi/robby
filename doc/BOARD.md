@@ -53,14 +53,6 @@ hand.
   solves with the same par the solver derives.
 - **needs:** R-004 (the same check proves it is reachable at all)
 
-### [R-003] The editor can ask for more than one thing
-- **what:** multi-part manifests and the rocket goal exist in the engine
-  (`Goal.exit` with `requires`) and are unreachable from the editor, which
-  places a single battery and nothing else. This is what lets a built room be
-  about *order*, which is the whole of World 4.
-- **done-when:** a built room can require two parts and a rocket, and the
-  thought bubble ticks them off as it does in a shipped level.
-
 ### [R-004] Every cell kind appears in a shipped level, and a check says so
 - **what:** Test World's comment claims one room per mechanic; no shipped level
   anywhere uses a one-way. Add the missing room(s) and the check that keeps the
@@ -74,11 +66,33 @@ hand.
 ### [R-005] The grid is not fixed at 9×7
 - **what:** editor rooms are 9×7 and cannot be resized. An adult building for an
   older child runs out of room; a small child wants fewer tiles, not more. The
-  solver cost is the constraint — open space is what makes `solve()` expensive
-  — so a bigger grid needs the depth cap thought about, not just the numbers
-  changed.
+  whole 9×7 is now editable, so this is only about the *size*, and the solver
+  cost is measured rather than feared: a wide-open 9×7 answers in 650–770ms,
+  9×9 in 917ms, 11×7 in 1175ms, and **11×9 in 2547ms** — which `MAX_W`/`MAX_H`
+  permit today and which is too slow to solve on a finished stroke. So a bigger
+  grid needs the depth cap or the solve moved off the main thread, not the
+  numbers changed. The numbers are in `editor.test.ts`, and the check fails at
+  11×9.
 - **done-when:** the grid can be sized in the editor, and the live verdict still
   returns fast enough not to be felt on the largest size offered.
+- **needs:** R-030 (or a depth cap that scales with open space)
+
+### [R-030] The live solve is on the main thread, and it is felt
+- **what:** `assess()` blocks for up to 770ms on a wide-open 9×7 and the editor
+  covers it with a spinner and two `requestAnimationFrame`s. That is the ceiling
+  now, not after [R-005] makes the grid bigger. `generate.ts` has the same
+  problem and its own card — one worker answers both.
+- **done-when:** a finished stroke never blocks the main thread, and the
+  spinner is animating because it is animating.
+- **needs:** R-008 (the same worker)
+
+### [R-031] `MAX_W` and `MAX_H` are a promise nothing keeps
+- **what:** they are enforced in `starterDraft` alone, which is called once with
+  no arguments — so nothing in the app can produce any size but 9×7, and
+  anything that could would get 11×9, which takes 2547ms to solve. Either the
+  cap belongs where drafts are made, or it should say what it is really for.
+- **done-when:** a draft cannot exist above the cap, and something fails if one
+  does.
 
 ### [R-006] A room is a URL
 - **what:** the map is `string[]` and rooms already save as the map string and
@@ -250,6 +264,23 @@ hand.
 ---
 
 ## history
+
+### [R-003] The editor can ask for more than one thing — **closed**
+The battery brush is an **object** brush: one button walking a ring — battery,
+cog, coil, core, rocket — cycled by tapping the tool tile it already is, which
+also aims a conveyor before it is painted rather than after three taps on the
+grid. `goalFor(map)` derives the goal from the room and is asked by both
+`assess()` and `playable()`; with only the first asking, a saved errand room
+would have reloaded as a collect room and been played at a par that is not true.
+
+Two battery-only assumptions went with it. The editor rendered
+`item === 'battery'` and nothing else, so a cog in a draft parsed, changed the
+answer and **drew nothing at all**; and the battery-else-part-else-key ternary
+was written out at three call sites, one of which had been narrowed. It is
+`itemIcon()` now.
+
+The bubble does tick the manifest off — it is the board's own `.think`, which
+already did, and the built room reaches it by being a `Chapter` like any other.
 
 ### [R-013] + [R-010] + [R-026] End the collision category — **closed**
 `Board.svelte` 582 → **449**: particles and Funke's roaming are modules

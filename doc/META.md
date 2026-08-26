@@ -75,6 +75,15 @@ minimap one counted marks the parts on the floor were still supplying, so a room
 whose conveyors had stopped being drawn still scored five. Both had been
 written, run, and seen to say `ok`.
 
+**Plant the fault on a committed tree, or with a copy beside you.**
+Planting is the habit above, and it has a sharp edge: the fault has to come back
+out. Three plants in one afternoon, two of them `cp`'d to a scratch file and
+restored for nothing — and the third undone with `git checkout` on the file,
+which took the whole uncommitted rewrite of `Editor.svelte` with it. The plant
+was applied *on top of* the work it was testing, so the only clean version in
+the tree was the one from before the work. **A one-file revert is only an undo
+if the file was clean when you planted.**
+
 **A two-minute check is one nobody runs.**
 The smoke suite was one suite until step frames and a 2.6s celebration took it
 past two minutes, at which point it stopped being run during work and started
