@@ -1,11 +1,11 @@
 # BOARD.md — task board
 
 One task per card. Cards carry *what* and *done-when*, never rationale — that
-belongs in `docs/MEMORY.md` or `docs/NOTES.md`.
+belongs in `doc/MEMORY.md` or `doc/NOTES.md`.
 
 **Targets:** `doing` 3 · `ready` 10 · `backlog` 40 · `history` 10.
 **Act at** 4 · 12 · 48 · 12 (`CLAUDE.md`). History past its target moves to
-`docs/LOG.md`; ready past its target means a card goes back to backlog, not that
+`doc/LOG.md`; ready past its target means a card goes back to backlog, not that
 ready is bigger now.
 
 Card format:
@@ -27,7 +27,7 @@ Card format:
 
 ## ready
 
-Order comes from the playtest (`docs/design/game/playtest.md`), which reordered
+Order comes from the playtest (`doc/design/game/playtest.md`), which reordered
 everything: the editor is not a side feature with rough edges, it is the surface
 people actually use, and its missing pieces are the constraint on the part of
 this that gets played. The editor cards come first, then the one that makes a
@@ -104,7 +104,7 @@ hand.
 - **what:** nobody has started this game without an adult beside them. Watch a
   child open it for the first time, alone, and write down where they stop. Not a
   build — an observation, and the only card here whose output is a document.
-- **done-when:** `docs/design/game/playtest.md` has a second session in it, and
+- **done-when:** `doc/design/game/playtest.md` has a second session in it, and
   the board has whatever cards it produced.
 
 ### [R-010] End the name-collision category
@@ -121,7 +121,7 @@ hand.
 ### [R-011] Randomness below the celebration line
 - **what:** idle tics, bonks and pickups play identically every time; the
   pattern to copy is in `throwParty()`. Blocked on where the line goes — see the
-  thread in `docs/NOTES.md`, which argues feedback should *not* vary.
+  thread in `doc/NOTES.md`, which argues feedback should *not* vary.
 - **done-when:** the things that reward you vary, the things that tell you what
   happened do not, and the smoke suite asserts the variety is real.
 - **needs:** NOTES thread "what should vary"
@@ -179,7 +179,7 @@ hand.
 
 ### [R-019] Two-player, or a parent mode
 - **what:** one builds, the other solves. Already happening informally
-  (`docs/design/game/playtest.md`); this is the version the game knows about.
+  (`doc/design/game/playtest.md`); this is the version the game knows about.
 - **done-when:** handing the phone over is a thing the game does, not a thing
   people do around it.
 - **needs:** R-006
@@ -197,7 +197,7 @@ hand.
   keyboard or heard through a screen reader. Do it once and write down what it
   was like before deciding what it should be.
 - **done-when:** the game is completable without a pointer, and
-  `docs/NOTES.md`'s keyboard thread has an answer in it.
+  `doc/NOTES.md`'s keyboard thread has an answer in it.
 - **needs:** NOTES thread "is there a keyboard story at all?"
 
 ---
@@ -210,21 +210,21 @@ with a read order, a write order, gates, and six surfaces that each have a
 target size and a line where they get condensed. The old `HANDOFF.md` was one
 418-line document holding durable truth, method lessons, open questions and
 work-to-do at once — four surfaces in a trench coat, and the reason none of it
-could be kept current. It was distributed into `docs/MEMORY.md`,
-`docs/META.md`, `docs/NOTES.md`, this board and `docs/design/`'s four clusters,
+could be kept current. It was distributed into `doc/MEMORY.md`,
+`doc/META.md`, `doc/NOTES.md`, this board and `doc/design/`'s four clusters,
 and then deleted: what was left of it duplicated content that now has owners,
 and an archive that duplicates git is not worth its drift.
 
-The log's downstream side became `docs/HISTORY.md` — the arc, oldest first,
+The log's downstream side became `doc/HISTORY.md` — the arc, oldest first,
 rewritten rather than appended to — so an overflowing log condenses into a story
 instead of accumulating a second copy of the commit history. All core surfaces
-moved to `docs/`; the root is `CLAUDE.md`, `README.md` and configuration.
+moved to `doc/`; the root is `CLAUDE.md`, `README.md` and configuration.
 
 Four drifts were found while seeding and are now recorded correctly: the
 stylesheet count (six → **eight**), the chapter count (four → **five**, with
 Test World on the level select), `Board.svelte` (~500 → **584**), and no shipped
 level using a one-way. The last two are cards ([R-013], [R-004]).
-`src/docs.test.ts` checks what a test can check about a documentation tree —
+`src/doc.test.ts` checks what a test can check about a documentation tree —
 that every path written down resolves, that each cluster page indexes its own
 tree, and that no content page creeps into the MEMORY index — with the
 sample-size assertion `CLAUDE.md` requires.

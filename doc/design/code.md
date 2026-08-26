@@ -16,10 +16,10 @@ list of constraints you do not get to relax on a tired afternoon.
 ## Where to go instead
 
 - Lessons about **how the work goes** rather than how the code is written are in
-  `docs/META.md` — an entry there carries the incident that earned it.
+  `doc/META.md` — an entry there carries the incident that earned it.
 - How any of this is verified: [`testing.md`](testing.md).
-- What is being built next, as cards, is `docs/BOARD.md`. What is unresolved is
-  `docs/NOTES.md`.
+- What is being built next, as cards, is `doc/BOARD.md`. What is unresolved is
+  `doc/NOTES.md`.
 
 ## The shape of it
 

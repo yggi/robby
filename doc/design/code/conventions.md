@@ -29,7 +29,7 @@ selector defined twice.
 **The guards are not the fix.** They fire after the mistake. Prefixing
 structural classes would make the collision impossible to write rather than
 detectable after the fact, which ends the category instead of policing it —
-`docs/BOARD.md` [R-010], and the lesson in `docs/META.md`.
+`doc/BOARD.md` [R-010], and the lesson in `doc/META.md`.
 
 ## Everything on the board is sized from one variable
 
@@ -99,7 +99,7 @@ storage on an opaque origin and the game must run memory-only in tests.
 Rooms a child built store **the map string and nothing else.** Par and tray are
 solved for again on load, so a saved room can never carry a stale par; if it
 stops solving it drops out of the list rather than being played wrong. That is
-also what makes a room shareable as a URL (`docs/BOARD.md` [R-006]).
+also what makes a room shareable as a URL (`doc/BOARD.md` [R-006]).
 
 `wipeProgress()` deliberately does not delete built rooms. Progress is the
 game's; the rooms are theirs.

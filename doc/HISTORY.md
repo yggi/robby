@@ -1,15 +1,15 @@
 # HISTORY.md — how the project got here
 
 The arc, at low resolution: what was decided, what was reversed, and what each
-turn cost. `docs/LOG.md` is what happened *this session*, in detail; this is
+turn cost. `doc/LOG.md` is what happened *this session*, in detail; this is
 what happened *to the project*, in the shape somebody arriving needs.
 
 **Target: 250 lines, act at 300** (`CLAUDE.md`). Oldest first, because it is a
-story rather than a feed. The target sits below `docs/MEMORY.md`'s on purpose:
+story rather than a feed. The target sits below `doc/MEMORY.md`'s on purpose:
 current truth outranks how it was arrived at, so this file may never be the
 longest thing in the repo.
 
-**It is rewritten, not appended to.** When `docs/LOG.md` goes over its line, its
+**It is rewritten, not appended to.** When `doc/LOG.md` goes over its line, its
 oldest sessions are *folded into the paragraph they belong to* and deleted — not
 moved here intact. A verbatim archive is what git already is; what git cannot
 give you cheaply is the arc, because it hands you commits rather than periods,
@@ -147,7 +147,7 @@ And running through the whole project, one enemy: **name collisions**, six of
 them, each producing a symptom that looked like anything but its cause — a
 `.cog` rule that turned the cog *part* into a spinning disc on the board, which
 is why levels with parts looked broken and battery levels did not. The six are
-listed with their symptoms in `docs/design/code/conventions.md`. Each fix added
+listed with their symptoms in `doc/design/code/conventions.md`. Each fix added
 a guard, and one guard caught its author's own collision inside the session it
 was written. They are still guards, though: they fire after the mistake, and
 ending the category rather than policing it is open work.
@@ -219,7 +219,7 @@ That reordered everything. The editor's missing pieces stopped being a rough
 edge on a side feature and became the constraint on the part people use, and
 sharing a room by URL stopped being a neat idea the moment rooms were already
 being passed between people by hand. The full account is
-`docs/design/game/playtest.md`.
+`doc/design/game/playtest.md`.
 
 ## The documents caught up
 
@@ -235,7 +235,7 @@ six stylesheets that are eight, four worlds that are five chapters with a
 developer bench among them, a 500-line component that is 584, and **no shipped
 level using a one-way** though the engine parses, simulates and solves them.
 
-The response was not to be more careful. It was `src/docs.test.ts`, which fails
+The response was not to be more careful. It was `src/doc.test.ts`, which fails
 when a written-down path stops resolving or an index stops matching its tree.
 
 ## Where it stands
@@ -246,6 +246,6 @@ file that runs from a phone with no network.
 
 The one shape worth recording as *history* rather than status: **the editor is
 the game now**, and the shipped curve is the smaller half of what people do with
-this. Everything at the top of `docs/BOARD.md` follows from that.
+this. Everything at the top of `doc/BOARD.md` follows from that.
 
 For Emilia.

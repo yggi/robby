@@ -1,9 +1,9 @@
 # MEMORY.md — project memory
 
 Durable, crystallized truth about `robby`. Facts and settled decisions only.
-Status in `docs/BOARD.md`, threads in `docs/NOTES.md`, method in
-`docs/META.md`, the arc in `docs/HISTORY.md`, this week's detail in
-`docs/LOG.md`.
+Status in `doc/BOARD.md`, threads in `doc/NOTES.md`, method in
+`doc/META.md`, the arc in `doc/HISTORY.md`, this week's detail in
+`doc/LOG.md`.
 
 **Target: 300 lines**, act at 360 (`CLAUDE.md`). On overflow, spill the fattest
 section into the cluster it belongs to and leave the index below untouched.
@@ -17,14 +17,14 @@ than by a row in a table that has to be re-read in full every time it grows.
 
 | Cluster | Ask it about |
 |---|---|
-| [`docs/design/game.md`](docs/design/game.md) | who it is for, what it teaches, the rule the whole thing turns on, what ships, and what a five-year-old actually did with it |
-| [`docs/design/feel.md`](docs/design/feel.md) | what the player sees, hears and touches — the two visual languages, the characters, motion and sound, the UX vocabulary |
-| [`docs/design/code.md`](docs/design/code.md) | how it is built — the engine/view split, the solver as infrastructure, the stack, and the conventions that were bought with bugs |
-| [`docs/design/testing.md`](docs/design/testing.md) | the three suites, the jsdom harness, and how to check things that cannot be seen |
+| [`doc/design/game.md`](doc/design/game.md) | who it is for, what it teaches, the rule the whole thing turns on, what ships, and what a five-year-old actually did with it |
+| [`doc/design/feel.md`](doc/design/feel.md) | what the player sees, hears and touches — the two visual languages, the characters, motion and sound, the UX vocabulary |
+| [`doc/design/code.md`](doc/design/code.md) | how it is built — the engine/view split, the solver as infrastructure, the stack, and the conventions that were bought with bugs |
+| [`doc/design/testing.md`](doc/design/testing.md) | the three suites, the jsdom harness, and how to check things that cannot be seen |
 
 The game cluster marks one of its pages **exploratory** — a report on one
 session with one child is evidence, not a finding. Everything else in
-`docs/design/` is as durable as this file.
+`doc/design/` is as durable as this file.
 
 ---
 
@@ -38,12 +38,12 @@ list of arrows, press play, and watch what your list actually does.
 That audience is not a style choice, it is the design brief, and nearly every
 decision follows from it: no text in the game loop, every state legible as
 motion or colour, sound that carries meaning, large targets, cheap failure,
-nothing ever destroyed by a mistake. → `docs/design/game/audience.md`
+nothing ever destroyed by a mistake. → `doc/design/game/audience.md`
 
 **What is being taught is not syntax. It is the gap between what you meant and
 what you wrote** — which is where all programming lives, and which is legible to
 a four-year-old the moment a robot walks confidently into a wall.
-→ `docs/design/game/thesis.md`
+→ `doc/design/game/thesis.md`
 
 The secondary audience is the adult sitting next to them. That is who the room
 names, the level select, the workshop prices and these documents are for.
@@ -64,7 +64,7 @@ this reason. Do not make it look like a dot per tile; that teaches the opposite
 of what is true.
 
 The map format, the cell kinds, the item kinds and the two goal types are in
-`docs/design/game/rules.md`. Absolute arrows rather than turn-left/turn-right,
+`doc/design/game/rules.md`. Absolute arrows rather than turn-left/turn-right,
 because mental rotation mostly is not there before six.
 
 ## 3. The engine knows nothing about the view
@@ -82,7 +82,7 @@ solver, the generator and the editor all get correct behaviour for free.
 **Funke has never been in the engine.** She cannot change an outcome. That is
 enforced by architecture rather than by discipline.
 
-→ `docs/design/code/architecture.md`
+→ `doc/design/code/architecture.md`
 
 ## 4. The solver is the quality bar
 
@@ -104,7 +104,7 @@ Cost, measured: under 100ms typically; 458ms on the 13-token Scrapyard finale.
 It is dominated by **open space**, because every tile in an open room is a
 junction. Always cap `maxDepth` at the par you are willing to accept plus one.
 
-→ `docs/design/code/solver.md`
+→ `doc/design/code/solver.md`
 
 ## 5. What ships
 
@@ -122,7 +122,7 @@ six tiles — those five plus the place for rooms you built.
 
 Worlds escalate the *kind* of thinking, not the token count. Test World is a
 developer bench that ships to players; whether it should is a live thread
-(`docs/NOTES.md`).
+(`doc/NOTES.md`).
 
 `Chapter` is the unit of content, and it pays off twice: **practice rooms** and
 **rooms a child built** are both assembled at runtime into a `Chapter` like any
@@ -130,7 +130,7 @@ other, so the level select, minimaps, playing, pips and the next button all work
 on them with no special cases.
 
 The economy, the workshop, the practice tile and the editor's shipped slice are
-in `docs/design/game/content.md`.
+in `doc/design/game/content.md`.
 
 ## 6. Themes
 
@@ -202,7 +202,7 @@ game's; the rooms are theirs.
 
 Two build decisions worth keeping, both with reasons that are not obvious: the
 bundle is an **IIFE, not an ES module**, and the **font travels inlined** as
-latin woff2 only. → `docs/design/code/stack.md`
+latin woff2 only. → `doc/design/code/stack.md`
 
 ## 10. Repo map
 
@@ -252,7 +252,7 @@ Do not sort the imports.
 Board kinds become element classes, so a bare rule on `cog` or `belt` or `exit`
 lands on the board whether you meant it or not. Two guards exist and both have
 caught real regressions. The full list of conventions, each with the bug that
-bought it, is `docs/design/code/conventions.md`.
+bought it, is `doc/design/code/conventions.md`.
 
 ## 12. Things that are deliberate, not oversights
 

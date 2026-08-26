@@ -51,18 +51,18 @@ Those catch **deletion, not wrongness**, and they must be re-tuned by hand every
 time the value is. There are about a dozen. They are worth keeping and worth
 being honest about: a check that can only notice a rule vanishing is half a
 check. Replacing them needs something that can see, and what that is in a repo
-with no external assets is an open thread (`docs/NOTES.md`, `docs/BOARD.md` [R-020]).
+with no external assets is an open thread (`doc/NOTES.md`, `doc/BOARD.md` [R-020]).
 
 ## The docs are checked too
 
-`src/docs.test.ts` treats the documentation tree as a structure, because an
+`src/doc.test.ts` treats the documentation tree as a structure, because an
 index that has drifted from the tree is worse than no index — it is read as
 authoritative and quietly sends you to a page that moved. It checks three things
 that rot silently:
 
 - every markdown path written down anywhere resolves
 - every cluster page indexes its own tree
-- no content page has crept into the `docs/MEMORY.md` index
+- no content page has crept into the `doc/MEMORY.md` index
 
 It judges no prose, and it carries the same sample-size assertion as everything
 else here: a run that found no pages to check is a failure.
@@ -73,4 +73,4 @@ else here: a run that found no pages to check is a failure.
   [`../code/conventions.md`](../code/conventions.md).
 - Where they live and what they are written against:
   [`harness.md`](harness.md).
-- The method lessons behind them, each with its incident: `docs/META.md`.
+- The method lessons behind them, each with its incident: `doc/META.md`.

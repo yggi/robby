@@ -19,8 +19,8 @@ asserts the variety is real — a check that would otherwise pass forever on one
 flourish.
 
 Idle tics, bonks and pickups play identically every time. That looks like an
-oversight and is carded as one (`docs/BOARD.md` [R-011]), but the counter-argument is
-live and in `docs/NOTES.md`: **a bonk is feedback**, and feedback that varies is
+oversight and is carded as one (`doc/BOARD.md` [R-011]), but the counter-argument is
+live and in `doc/NOTES.md`: **a bonk is feedback**, and feedback that varies is
 harder to learn from than feedback that does not. The current best guess is that
 variety belongs to the things that reward you and sameness to the things that
 tell you what happened. It is untested.
@@ -58,7 +58,7 @@ waiting for and then release. The second one is worth pressing a button for.
 
 Between worlds, an arrival card names where they have landed. It is the only
 story beat in the game, and the only step so far toward connecting thirty-two
-rooms into a journey (`docs/NOTES.md`).
+rooms into a journey (`doc/NOTES.md`).
 
 ## Sound is a machine
 

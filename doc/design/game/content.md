@@ -11,7 +11,7 @@ with no special-casing at all.
 
 That was not the motivation for `Chapter`. It is the consequence, and it is the
 best argument in the codebase for picking the unit that makes special cases
-disappear — see `docs/META.md`.
+disappear — see `doc/META.md`.
 
 ## What ships
 
@@ -30,7 +30,7 @@ you built.
 Room names are for the adult: Charging Nook, Sleep Bay, Two Cogs, No Left Turns,
 Mind the Gap, Order of Things. They also do quiet world-building — the Sleep Bay
 has Robby's berth with Funke's basket beside it — which is the only story the
-game currently tells (`docs/NOTES.md`).
+game currently tells (`doc/NOTES.md`).
 
 **Test World ships to players** and its comment claims "every trigger the engine
 supports has a level here", which is not true: no shipped level uses a one-way.
@@ -56,7 +56,7 @@ for Robby, a tail for Funke, a nose for the rocket — four parts each, priced 0
 
 One slot per character is the whole shop, so bits accumulate faster than there
 is anything to spend them on. That is a real curve problem and it is carded
-(`docs/BOARD.md` [R-015]), not a rounding error.
+(`doc/BOARD.md` [R-015]), not a rounding error.
 
 Progress and purchases persist; `wipeProgress()` clears them and **deliberately
 does not delete built rooms**. Progress is the game's; the rooms are theirs.

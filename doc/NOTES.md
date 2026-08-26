@@ -1,9 +1,9 @@
 # NOTES.md — open threads
 
 **Open, uncrystallized threads only.** Not a task list (that is
-`docs/BOARD.md`), not a record (that is `docs/LOG.md`), not settled truth (that
-is `docs/MEMORY.md`). A thread leaves exactly three ways: it crystallizes into
-`docs/MEMORY.md`, becomes a card in `docs/BOARD.md`, or is deleted as no longer
+`doc/BOARD.md`), not a record (that is `doc/LOG.md`), not settled truth (that
+is `doc/MEMORY.md`). A thread leaves exactly three ways: it crystallizes into
+`doc/MEMORY.md`, becomes a card in `doc/BOARD.md`, or is deleted as no longer
 interesting.
 
 **Target: 100 lines, act at 120** (`CLAUDE.md`). At 120 the threads have gone
@@ -16,7 +16,7 @@ stale: resolve, promote or delete, back to 100 or below in one pass.
 Shipped as "a first slice" — floor, wall, battery, bridge, conveyor, a fixed 9×7
 grid, undo only from the toolbar. It is the thing that gets used, and it is used
 *between people*: Emilia and her father build rooms for each other to solve
-(`docs/design/game/playtest.md`). An adult building with belts and bridges makes
+(`doc/design/game/playtest.md`). An adult building with belts and bridges makes
 rooms that are a real challenge for older children, so the ceiling is far above
 the shipped curve.
 

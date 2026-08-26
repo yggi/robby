@@ -66,9 +66,9 @@ same kind of object.
   have crossed it.
 - **`gate` / `plate`** — linked by id. A pair is inherently a two-step
   interaction, which is why the editor does not have them yet
-  (`docs/BOARD.md` [R-001]).
+  (`doc/BOARD.md` [R-001]).
 - **`oneway`** — may only be exited in `only`. Parsed, simulated, solvable, and
-  **used by no shipped level at all** (`docs/BOARD.md` [R-004]).
+  **used by no shipped level at all** (`doc/BOARD.md` [R-004]).
 
 ## Items and goals
 

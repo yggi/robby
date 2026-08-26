@@ -1,6 +1,6 @@
 # META.md — how the work goes
 
-Durable lessons about **method**, not about the game. `docs/MEMORY.md` is what the
+Durable lessons about **method**, not about the game. `doc/MEMORY.md` is what the
 project *is*; this is what building it has taught us about building it.
 
 Every entry names the incident that earned it. An abstract rule nobody paid for
@@ -139,7 +139,7 @@ The handover said six stylesheets (there are eight), four worlds (five chapters
 ship, and Test World is on the level select), and `Board.svelte` at ~500 lines
 (584). None of it was carelessness; the tree moved and the prose did not. Two
 responses, both taken: the counts that a reader would act on now live in
-`docs/MEMORY.md` where they are read every session, and `src/docs.test.ts` checks the
+`doc/MEMORY.md` where they are read every session, and `src/doc.test.ts` checks the
 parts of the shape a test *can* check — that every path written down resolves,
 that the index matches the tree. Prose about a tree is a claim with no owner
 unless something fails when it stops being true.
