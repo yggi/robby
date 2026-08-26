@@ -1,8 +1,9 @@
 # MEMORY.md — project memory
 
 Durable, crystallized truth about `robby`. Facts and settled decisions only.
-Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in
-`META.md`.
+Status in `docs/BOARD.md`, threads in `docs/NOTES.md`, method in
+`docs/META.md`, the arc in `docs/HISTORY.md`, this week's detail in
+`docs/LOG.md`.
 
 **Target: 300 lines**, act at 360 (`CLAUDE.md`). On overflow, spill the fattest
 section into the cluster it belongs to and leave the index below untouched.
@@ -121,7 +122,7 @@ six tiles — those five plus the place for rooms you built.
 
 Worlds escalate the *kind* of thinking, not the token count. Test World is a
 developer bench that ships to players; whether it should is a live thread
-(`NOTES.md`).
+(`docs/NOTES.md`).
 
 `Chapter` is the unit of content, and it pays off twice: **practice rooms** and
 **rooms a child built** are both assembled at runtime into a `Chapter` like any

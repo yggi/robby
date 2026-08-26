@@ -51,8 +51,8 @@ feature, because rooms are *already* being passed between people by hand.
 
 **The beginning.** Emilia had an adult beside her the first time. Whether a
 child meets Robby cold and gets moving is a different question from whether the
-game is solvable, and it is the one to watch next — `BOARD.md` [R-009], and the
-thread in `NOTES.md`.
+game is solvable, and it is the one to watch next — `docs/BOARD.md` [R-009], and the
+thread in `docs/NOTES.md`.
 
 ## Where to go instead
 

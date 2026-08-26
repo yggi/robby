@@ -74,16 +74,23 @@ write something that judges whether a level is any good, ask the solver instead.
 
 ## Where the documentation is
 
-`CLAUDE.md` is the entrypoint and says what to read in what order. In short:
+`CLAUDE.md` is the entrypoint and says what to read in what order. Everything
+else lives in `docs/`:
 
 | | |
 | --- | --- |
-| `MEMORY.md` | what the project *is* — durable facts, and the index to `docs/design/` |
-| `META.md` | what building it taught us about building it, each lesson with its scar |
-| `NOTES.md` | what is unresolved right now |
-| `BOARD.md` | what to do next |
-| `LOG.md` | how it got here. History, not context |
+| `docs/MEMORY.md` | what the project *is* — durable facts, and the index to `docs/design/` |
+| `docs/META.md` | what building it taught us about building it, each lesson with its scar |
+| `docs/NOTES.md` | what is unresolved right now |
+| `docs/BOARD.md` | what to do next |
+| `docs/HISTORY.md` | how it got here — the arc, at low resolution |
+| `docs/LOG.md` | what happened in the last few sessions, in detail |
 
 `docs/design/` holds the detail in four clusters — **game**, **feel**, **code**
-and **testing** — each with a page that indexes its own tree.
-`docs/handoff-2026-08.md` is the original handover, kept as a record.
+and **testing** — each with a page that indexes its own tree. Start at
+`docs/design/game.md` if you want to know what the game is, or
+`docs/design/code.md` if you want to change it.
+
+The documentation tree is checked by `src/docs.test.ts`, which runs in
+`npm test`: every path written down here has to resolve, and every index has to
+match its tree.

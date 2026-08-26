@@ -1,9 +1,10 @@
 # NOTES.md — open threads
 
-**Open, uncrystallized threads only.** Not a task list (that is `BOARD.md`), not
-a record (that is `LOG.md`), not settled truth (that is `MEMORY.md`). A thread
-leaves exactly three ways: it crystallizes into `MEMORY.md`, becomes a card in
-`BOARD.md`, or is deleted as no longer interesting.
+**Open, uncrystallized threads only.** Not a task list (that is
+`docs/BOARD.md`), not a record (that is `docs/LOG.md`), not settled truth (that
+is `docs/MEMORY.md`). A thread leaves exactly three ways: it crystallizes into
+`docs/MEMORY.md`, becomes a card in `docs/BOARD.md`, or is deleted as no longer
+interesting.
 
 **Target: 100 lines, act at 120** (`CLAUDE.md`). At 120 the threads have gone
 stale: resolve, promote or delete, back to 100 or below in one pass.

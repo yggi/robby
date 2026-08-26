@@ -16,7 +16,7 @@ environment with no layout engine.
 ## Where to go instead
 
 - Method lessons about verification — a test that passes either way, a check
-  that cannot fail — are in `META.md`, each with its incident.
+  that cannot fail — are in `docs/META.md`, each with its incident.
 - The rules being tested: [`game/rules.md`](game/rules.md).
 - The conventions the guards enforce:
   [`code/conventions.md`](code/conventions.md).

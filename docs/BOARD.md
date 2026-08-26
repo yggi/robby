@@ -1,11 +1,11 @@
 # BOARD.md — task board
 
 One task per card. Cards carry *what* and *done-when*, never rationale — that
-belongs in `MEMORY.md` or `NOTES.md`.
+belongs in `docs/MEMORY.md` or `docs/NOTES.md`.
 
 **Targets:** `doing` 3 · `ready` 10 · `backlog` 40 · `history` 10.
 **Act at** 4 · 12 · 48 · 12 (`CLAUDE.md`). History past its target moves to
-`LOG.md`; ready past its target means a card goes back to backlog, not that
+`docs/LOG.md`; ready past its target means a card goes back to backlog, not that
 ready is bigger now.
 
 Card format:
@@ -121,7 +121,7 @@ hand.
 ### [R-011] Randomness below the celebration line
 - **what:** idle tics, bonks and pickups play identically every time; the
   pattern to copy is in `throwParty()`. Blocked on where the line goes — see the
-  thread in `NOTES.md`, which argues feedback should *not* vary.
+  thread in `docs/NOTES.md`, which argues feedback should *not* vary.
 - **done-when:** the things that reward you vary, the things that tell you what
   happened do not, and the smoke suite asserts the variety is real.
 - **needs:** NOTES thread "what should vary"
@@ -197,7 +197,7 @@ hand.
   keyboard or heard through a screen reader. Do it once and write down what it
   was like before deciding what it should be.
 - **done-when:** the game is completable without a pointer, and
-  `NOTES.md`'s keyboard thread has an answer in it.
+  `docs/NOTES.md`'s keyboard thread has an answer in it.
 - **needs:** NOTES thread "is there a keyboard story at all?"
 
 ---
@@ -206,18 +206,25 @@ hand.
 
 ### [R-000] The agentic structure, seeded from the handover — **closed**
 `CLAUDE.md` was a briefing that pointed at three documents; it is now a contract
-with a read order, a write order, and five surfaces that each have a target size
-and a line where they get condensed. `HANDOFF.md` was one 418-line document
-holding durable truth, method lessons, open questions and work-to-do at once —
-which is four surfaces in a trench coat, and the reason none of it could be kept
-current. It was distributed into `MEMORY.md`, `META.md`, `NOTES.md`, this board
-and `docs/design/`'s four clusters, and preserved whole at
-`docs/handoff-2026-08.md` as the record of a moment.
+with a read order, a write order, gates, and six surfaces that each have a
+target size and a line where they get condensed. The old `HANDOFF.md` was one
+418-line document holding durable truth, method lessons, open questions and
+work-to-do at once — four surfaces in a trench coat, and the reason none of it
+could be kept current. It was distributed into `docs/MEMORY.md`,
+`docs/META.md`, `docs/NOTES.md`, this board and `docs/design/`'s four clusters,
+and then deleted: what was left of it duplicated content that now has owners,
+and an archive that duplicates git is not worth its drift.
 
-Three drifts were found while seeding and are now recorded correctly: the
+The log's downstream side became `docs/HISTORY.md` — the arc, oldest first,
+rewritten rather than appended to — so an overflowing log condenses into a story
+instead of accumulating a second copy of the commit history. All core surfaces
+moved to `docs/`; the root is `CLAUDE.md`, `README.md` and configuration.
+
+Four drifts were found while seeding and are now recorded correctly: the
 stylesheet count (six → **eight**), the chapter count (four → **five**, with
-Test World on the level select), and `Board.svelte` (~500 → **584**). The last
-of those is now a card. `src/docs.test.ts` checks what a test can check about a
-documentation tree — that every path written down resolves, that each cluster
-page indexes its own tree, and that no content page creeps into the MEMORY
-index — with the sample-size assertion `CLAUDE.md` requires.
+Test World on the level select), `Board.svelte` (~500 → **584**), and no shipped
+level using a one-way. The last two are cards ([R-013], [R-004]).
+`src/docs.test.ts` checks what a test can check about a documentation tree —
+that every path written down resolves, that each cluster page indexes its own
+tree, and that no content page creeps into the MEMORY index — with the
+sample-size assertion `CLAUDE.md` requires.

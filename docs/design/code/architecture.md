@@ -82,10 +82,10 @@ cases. See [`../game/content.md`](../game/content.md).
 `Board.svelte` is **584 lines** and does five jobs: derivation, drag-free
 rendering, particles, the camera, and Funke's roaming AI. Two of them come out
 cleanly — the particle code is imperative DOM and wants to be a module, and
-Funke's breadth-first roaming is self-contained. `BOARD.md` [R-013].
+Funke's breadth-first roaming is self-contained. `docs/BOARD.md` [R-013].
 
 There is **no error boundary**. If a render throws, the screen goes blank — on a
-phone, with no console, in front of a child. `BOARD.md` [R-014].
+phone, with no console, in front of a child. `docs/BOARD.md` [R-014].
 
 ## Where to go instead
 

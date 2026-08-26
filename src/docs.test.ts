@@ -1,7 +1,7 @@
 /**
  * The docs are a structure, so the structure is checked.
  *
- * `docs/design/` is four clusters, indexed by `MEMORY.md` one level up. That
+ * `docs/design/` is four clusters, indexed by `docs/MEMORY.md` one level up. That
  * shape only helps while it is true: an index that has drifted from the tree is
  * worse than no index, because it is read as authoritative and quietly sends
  * you to a page that moved.
@@ -13,10 +13,10 @@
  *
  * Every assertion over a scraped sample is preceded by one asserting the sample
  * is not empty. That rule was bought with the `(0 checked)` incident; see
- * `META.md`.
+ * `docs/META.md`.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, normalize, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -26,20 +26,34 @@ const DESIGN = join(ROOT, 'docs/design')
 const CLUSTERS = ['game', 'feel', 'code', 'testing']
 
 /**
- * History is exempt from path resolution. `LOG.md` and the handover record
- * paths that were correct when they were written, and rewriting them to keep a
- * checker happy would be editing the record to match the present.
+ * `docs/LOG.md` is exempt from path resolution. It is append-only, and it
+ * records paths that were correct when they were written; rewriting them to
+ * keep a checker happy would be editing the record to match the present.
+ *
+ * `docs/HISTORY.md` is deliberately *not* exempt. It is rewritten rather than
+ * appended to, so its links describe the tree as it is now and have to resolve
+ * like anything else's.
  */
-const HISTORY = (rel: string) =>
-  rel === 'LOG.md' || rel.startsWith('docs/log/') || rel.startsWith('docs/handoff-')
+const APPEND_ONLY = (rel: string) => rel === 'docs/LOG.md'
 
+/**
+ * Every markdown file that is part of the contract.
+ *
+ * Nested checkouts are skipped — a git worktree parked inside the repo is
+ * somebody else's tree, and its stale links are not this tree's problem. That
+ * is not hypothetical: a worktree left in the root failed this check with four
+ * broken paths that had all been correct where they were written.
+ */
 function markdownUnder(dir: string): string[] {
   let found: string[] = []
   for (const entry of readdirSync(dir)) {
     if (entry === 'node_modules' || entry === 'dist' || entry.startsWith('.')) continue
     const path = join(dir, entry)
-    if (statSync(path).isDirectory()) found = found.concat(markdownUnder(path))
-    else if (entry.endsWith('.md')) found.push(path)
+    if (!statSync(path).isDirectory()) {
+      if (entry.endsWith('.md')) found.push(path)
+    } else if (!existsSync(join(path, '.git'))) {
+      found = found.concat(markdownUnder(path))
+    }
   }
   return found
 }
@@ -92,9 +106,9 @@ describe('the design docs are four clusters, and the map matches the ground', ()
   })
 
   it('MEMORY.md indexes the clusters and nothing below them', () => {
-    const memory = readFileSync(join(ROOT, 'MEMORY.md'), 'utf8')
+    const memory = readFileSync(join(ROOT, 'docs/MEMORY.md'), 'utf8')
     const cut = memory.indexOf('\n---\n')
-    expect(cut, 'MEMORY.md has no index section').toBeGreaterThan(0)
+    expect(cut, 'docs/MEMORY.md has no index section').toBeGreaterThan(0)
     const index = memory.slice(0, cut)
 
     for (const cluster of CLUSTERS) {
@@ -113,7 +127,7 @@ describe('the design docs are four clusters, and the map matches the ground', ()
 
 describe('every markdown path that is written down resolves', () => {
   it('no link or backticked path points at a file that is not there', () => {
-    const files = markdownUnder(ROOT).filter((f) => !HISTORY(relative(ROOT, f)))
+    const files = markdownUnder(ROOT).filter((f) => !APPEND_ONLY(relative(ROOT, f)))
     expect(files.length, 'no markdown was found to check').toBeGreaterThan(0)
 
     const broken: string[] = []

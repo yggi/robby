@@ -20,8 +20,8 @@ is the only evidence anybody has that any of it works.
   — is a feel question: [`feel.md`](feel.md).
 - Whether a room is any good is not a design argument, it is
   [`code/solver.md`](code/solver.md). Ask it before writing a heuristic.
-- What is unresolved about the content is `NOTES.md`; what is being built is
-  `BOARD.md`.
+- What is unresolved about the content is `docs/NOTES.md`; what is being built is
+  `docs/BOARD.md`.
 
 ## The shape of it
 

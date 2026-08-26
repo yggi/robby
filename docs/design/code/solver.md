@@ -39,7 +39,7 @@ That one filter took generator acceptance from **55% to 17%**, and it would have
 caught, automatically, both hand-built levels where a mechanic turned out to be
 bypassable.
 
-Generalised in `META.md` as: *a feature you cannot switch off cannot be shown to
+Generalised in `docs/META.md` as: *a feature you cannot switch off cannot be shown to
 be doing anything.* When you add a mechanic, add the way to disable it in the
 same commit — it is what the generator judges with, and it is the only honest
 test that the mechanic matters.
@@ -55,7 +55,7 @@ depth 16 at all.
 
 That is a happy constraint: wide-open rooms are both expensive to solve and
 terrible puzzles, so one rule serves both. It is also the thing that bounds the
-editor's grid size — `BOARD.md` [R-005] cannot just change the numbers.
+editor's grid size — `docs/BOARD.md` [R-005] cannot just change the numbers.
 
 **Always cap `maxDepth` at the par you are willing to accept, plus one.**
 Searching to 20 while rejecting anything over 11 is pure waste, and the waste is

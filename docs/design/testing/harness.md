@@ -22,7 +22,7 @@ Worse, before the shim existed the throw from `Element.animate` aborted the
 effect queue, which meant **every particle effect in the game was untestable.**
 Nothing said so. The suite was green.
 
-The general lesson is in `META.md`: silence from a test is not evidence, and a
+The general lesson is in `docs/META.md`: silence from a test is not evidence, and a
 missing environment capability can take out a whole subsystem's testability
 without producing a single failure.
 

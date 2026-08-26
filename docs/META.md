@@ -1,6 +1,6 @@
 # META.md — how the work goes
 
-Durable lessons about **method**, not about the game. `MEMORY.md` is what the
+Durable lessons about **method**, not about the game. `docs/MEMORY.md` is what the
 project *is*; this is what building it has taught us about building it.
 
 Every entry names the incident that earned it. An abstract rule nobody paid for
@@ -104,6 +104,29 @@ than the review that would notice.
 
 ## Bookkeeping
 
+**A document that needs two disciplines is two documents.**
+Twice in one day, the same shape. `HANDOFF.md` held durable truth, method
+lessons, open questions and work-to-do at once — and could not be kept current,
+because there was nowhere to put an update that did not also mean re-reading the
+other three kinds of thing. Then `LOG.md` turned out to be a dated worklog
+sitting on top of a narrative history: one is appended to and never touched
+again, the other has to be *rewritten* as it ages or it stops being readable.
+Neither was badly written. Both were unmaintainable for the same structural
+reason. **The tell is a maintenance rule that has to be stated twice with
+different verbs for different parts of the same file** — at that point it is two
+files, and splitting costs an afternoon while not splitting costs every session.
+
+**An archive that duplicates git is not worth its drift.**
+Inherited rather than earned here, from `laborsim`, which ran three verbatim log
+archives for a month: 1,577 lines, 2% of what they held condensed, four entries
+duplicated between them, and read by nothing. The replacement is to **fold** an
+overflowing log into the arc it belongs to and delete it. Nothing is lost —
+it is all in git twice over — and what git cannot give you cheaply is the arc,
+because it hands you commits rather than periods, and changes rather than
+changes of mind. The corollary bit immediately: a handover kept "as a record"
+one session was deleted the next, because everything unique in it had been given
+an owner and what remained was three wrong facts and a second place to look.
+
 **Editing by string splice leaves the old block behind, and later wins.**
 Three separate times a replacement landed beside the block it was meant to
 replace rather than over it — and being later in the cascade, the stale one won,
@@ -116,7 +139,7 @@ The handover said six stylesheets (there are eight), four worlds (five chapters
 ship, and Test World is on the level select), and `Board.svelte` at ~500 lines
 (584). None of it was carelessness; the tree moved and the prose did not. Two
 responses, both taken: the counts that a reader would act on now live in
-`MEMORY.md` where they are read every session, and `src/docs.test.ts` checks the
+`docs/MEMORY.md` where they are read every session, and `src/docs.test.ts` checks the
 parts of the shape a test *can* check — that every path written down resolves,
 that the index matches the tree. Prose about a tree is a claim with no owner
 unless something fails when it stops being true.
