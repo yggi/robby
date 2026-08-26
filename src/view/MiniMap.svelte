@@ -1,6 +1,7 @@
 <script lang="ts">
   import { parseMap } from '../engine/parse'
   import { posKey, type Level } from '../engine/types'
+  import { markCls } from './css'
   let { level }: { level: Level } = $props()
 
   // A tiny picture of the room's shape. Far more use to a pre-reader than the
@@ -19,7 +20,7 @@
         x,
         y,
         key: posKey({ x, y }),
-        kind: mark(x, y),
+        mark: mark(x, y),
       })),
     ).flat(),
   )
@@ -46,6 +47,6 @@
 
 <div class="mini" style="--mw:{parsed.world.w}; --mh:{parsed.world.h}">
   {#each cells as c (c.key)}
-    <i class={c.kind} style="--mx:{c.x}; --my:{c.y}"></i>
+    <i class={markCls(c.mark)} style="--mx:{c.x}; --my:{c.y}"></i>
   {/each}
 </div>

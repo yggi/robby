@@ -113,13 +113,6 @@ hand.
 - **done-when:** `doc/design/game/playtest.md` has a second session in it, and
   the board has whatever cards it produced.
 
-### [R-010] End the name-collision category
-- **what:** six collisions so far, and the two guards fire after the mistake.
-  Prefix structural classes so a board kind cannot collide with a component
-  class by construction, and keep the guards as a net.
-- **done-when:** a bare rule on a board kind name is impossible to write by
-  accident, and the guards still pass.
-
 ---
 
 ## backlog
@@ -138,14 +131,6 @@ hand.
 - **done-when:** finishing a room leads into the next one rather than cutting to
   it, and it can be sat through twice without wanting to be skipped.
 - **needs:** NOTES thread "thirty-two rooms, no journey"
-
-### [R-013] `Board.svelte` is doing five jobs
-- **what:** 584 lines holding derivation, rendering, particles, the camera and
-  Funke's roaming AI. Two of those come out cleanly: the particle code is
-  imperative DOM and wants to be a module, and Funke's breadth-first roaming is
-  self-contained.
-- **done-when:** particles and Funke's roaming are modules, and `Board.svelte`
-  renders.
 
 ### [R-014] An error boundary
 - **what:** if a render throws, the screen goes blank — on a phone, with no
@@ -198,23 +183,36 @@ hand.
   that can see, and the rest are gone.
 - **needs:** NOTES thread "regex is holding up a dozen CSS claims"
 
-### [R-023] The guards' lists come from the engine, not from a transcription
-- **what:** `smoke.fast.mjs` re-types two lists the engine already owns — the
-  nine themes, and the board kinds. The kinds list was missing `oneway` for its
-  whole life, so a bare `.oneway {}` was the one collision nothing could catch;
-  it has been added by hand, which is the same mistake with a fresh clock. The
-  `.mjs` suites cannot import TypeScript, so this wants either a small emitted
-  manifest or a vitest check that reads the suite as text and compares.
-- **done-when:** adding a kind or a theme to the engine cannot leave the guard
-  behind, and something fails if it does.
+### [R-023] The themes list still comes from a transcription
+- **what:** the board-kind half is done — `namesIn()` in `test/harness.mjs`
+  reads `CELL_KINDS`, `ITEM_KINDS`, `MARKS` and `FX_CLASSES` out of the source
+  text, so adding a kind cannot leave a guard behind. The **nine themes** are
+  still re-typed in `smoke.fast.mjs`'s palette check, and `THEMES` is a `const`
+  array like the others, so this is one more `namesIn()` call.
+- **done-when:** adding a theme to the engine cannot leave the guard behind,
+  and something fails if it does.
+
+### [R-029] The pickup burst was never drawn
+- **what:** `pickup()` spawned eight `.spark` spans with a colour, a direction
+  and a stepped delay, and **no `.spark` rule has ever existed in any commit**,
+  so nothing rendered — found by the guard that now asserts every class the code
+  writes has a rule. The dead spawn code is deleted; the intent is not. A ring
+  alone is thin for the one moment the game says *you got it*, but eight sparks
+  on every pickup changes the feel of the whole curve, so it wants deciding
+  rather than restoring.
+- **done-when:** picking something up either has a burst that was designed, or
+  a line in `doc/design/feel/motion-and-sound.md` saying the ring is the whole
+  of it on purpose.
 
 ### [R-024] Three guards can pass on an empty sample
 - **what:** the `@keyframes`, clip-rule and bare-kind guards each interpolate a
   count into their label and never assert it — `no two animations share a name
   (0 defined)` would print `ok`. That is exactly the `(0 checked)` shape
-  `CLAUDE.md` gate 3 forbids, in the file that exists to enforce it.
-- **done-when:** each of the three fails on an empty sample, proven by planting
-  it.
+  `CLAUDE.md` gate 3 forbids, in the file that exists to enforce it. The five
+  guards added since all assert their counts; these three still do not. One
+  more of the same shape while in there: `Funke does not upstage Robby` in
+  `smoke.full.mjs` asserts the cat lacks a class nothing has ever given it.
+- **done-when:** each fails on an empty sample, proven by planting it.
 
 ### [R-025] `report()` does not do what the docs say it does
 - **what:** `doc/design/testing/harness.md` says "the report fails if any
@@ -222,15 +220,6 @@ hand.
   only assertion is one point-in-time check in the full suite, and the fast
   suite does not import it at all. Either wire it in or stop claiming it.
 - **done-when:** an uncaught error fails both suites, proven by throwing one.
-
-### [R-026] `.star` and `.confetti` collide, live in the shipped build
-- **what:** collision **seven**. `.star` (sky decor) and `.confetti` are the
-  same specificity and both declare `animation`; `.star` is later in
-  `world.css`, so the one-in-three confetti particles given `class="confetti
-  star"` run `twinkle … infinite` instead of `fall`. Neither guard fires — the
-  keyframe names differ and `star` is not a board kind.
-- **done-when:** confetti falls, and a guard would catch the next one of these.
-- **needs:** R-010 is the general form; this one is a rename and need not wait
 
 ### [R-027] `bits.ts` is two modules in a trench coat
 - **what:** a coin-flight animation and the entire save file share one file, and
@@ -261,6 +250,38 @@ hand.
 ---
 
 ## history
+
+### [R-013] + [R-010] + [R-026] End the collision category — **closed**
+`Board.svelte` 582 → **449**: particles and Funke's roaming are modules
+(`particles.ts`, `roam.ts`), and the roaming half is now **pure**, so it has 11
+unit tests where it had none — proven by planting the historical fault, the
+hand-written passability check that had her padding through shut gates.
+`throwParty` deliberately stayed: `party` and `beat` are celebration state read
+by three derivations in the component.
+
+`src/view/css.ts` is the only road from a name the engine owns to a class in the
+DOM. Three families namespaced — cell and item kinds (`k-`), the minimap's
+single letters (`m-`, and `.b`/`.m` were live hazards), every particle (`fx-`).
+Collision **seven** ([R-026] — a third of the confetti running the sky decor's
+`twinkle … infinite` instead of `fall`, in the shipped build) closed by
+construction rather than by patch.
+
+Three guards, each proven by planting its fault: no element wears a bare engine
+name, no rule names a class nothing writes *and nothing is written with no rule*,
+and no element is claimed by two animations. [R-023] fell out — every guard list
+is read from the file that owns it, so the transcribed kinds list that was
+missing `oneway` for the mechanic's whole life is gone.
+
+**The second guard found that `.spark` has never existed.** Every pickup spawned
+eight of them, styled by nothing, in every commit the game has ever had. Deleted
+rather than styled — deleting is provably behaviour-preserving, designing a
+burst is not a refactor's call ([R-029]).
+
+The first version of guard 1 was wrong in an instructive way: it asserted *every*
+class was prefixed and failed on `swatch batt`, a legitimate hand-written
+variant. The invariant actually wanted is narrower and needs no allowlist.
+
+276 → **287** unit tests, 191 → **199** fast checks, 142 → **145** full.
 
 ### [R-022] One fact, written once — **closed**
 The layer that turns a map string into a playable level had been written once

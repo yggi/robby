@@ -7,6 +7,7 @@
   import { DIRS, posKey, spend, THEMES, type Dir, type Theme } from '../engine/types'
   import { sfx } from './audio'
   import { DIR_ANGLE } from './colors'
+  import { kindCls } from './css'
   import { DECOR } from './decor'
   import type { Game } from './game.svelte'
   import { geom } from './geom'
@@ -236,7 +237,7 @@
       <div class="elayer floors">
         {#each cells as c (c.key)}
           {#if c.ground}
-            <div class="tile {c.kind}" style="--x:{c.x}; --y:{c.y}; --in:{c.in}; --rad:{c.rad}"></div>
+            <div class="tile {kindCls(c.kind)}" style="--x:{c.x}; --y:{c.y}; --in:{c.in}; --rad:{c.rad}"></div>
           {/if}
         {/each}
       </div>
@@ -258,7 +259,7 @@
         {/each}
 
         {#each cells.filter((c) => c.item === 'battery') as c (c.key)}
-          <div class="item battery" style="--x:{c.x}; --y:{c.y}">
+          <div class="item {kindCls('battery')}" style="--x:{c.x}; --y:{c.y}">
             <span class="cellwrap">{@html BATT_SVG}</span>
           </div>
         {/each}
@@ -301,16 +302,19 @@
   <div class="tools">
     <div class="paints">
       {#each PAINTS as p (p.brush)}
-        <button class="paint {p.brush}" class:on={brush === p.brush}
+        <!-- a brush is a cell kind, so its class goes through `kindCls` like
+             every other one: `.wall {}` written for anything else must never
+             be able to reach the palette -->
+        <button class="paint {kindCls(p.brush)}" class:on={brush === p.brush}
                 aria-label={p.label} onclick={() => (brush = p.brush)}>
           {#if p.brush === 'battery'}
             <span class="swatch batt">{@html BATT_SVG}</span>
           {:else if p.brush === 'fragile'}
             <span class="swatch span">{@html STRANDS_SVG}</span>
           {:else if p.brush === 'belt'}
-            <span class="swatch belt"><i></i><i></i><i></i></span>
+            <span class="swatch {kindCls('belt')}"><i></i><i></i><i></i></span>
           {:else}
-            <span class="swatch {p.brush}"></span>
+            <span class="swatch {kindCls(p.brush)}"></span>
           {/if}
         </button>
       {/each}

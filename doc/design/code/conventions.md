@@ -4,9 +4,9 @@ Nothing here is here because it seemed tidy. Do not add a rule to this page in
 advance of an incident; a rule without a receipt is advice, and it will be
 relaxed by whoever finds it inconvenient.
 
-## Name collisions are the recurring failure mode
+## Name collisions were the recurring failure mode
 
-Six so far:
+Seven of them, and then the category was ended rather than policed further:
 
 | Collision | Symptom |
 |---|---|
@@ -16,20 +16,40 @@ Six so far:
 | `.tray` | the store's parts bin gave the arrow tray `overflow-x: auto` |
 | `.cog` | turned the cog *part* into a 22px spinning disc |
 | `.grid` | the editor and the level select both used it |
+| `.star` | a third of the confetti twinkled in place instead of falling |
 
-The mechanism: **board kinds become element classes.** `<div class="item cog">`
-means a bare `.cog {}` anywhere in eight stylesheets lands on the board, whether
-you meant it or not.
+The mechanism was that **names the engine owns became element classes verbatim**.
+`<div class="item cog">` meant a bare `.cog {}` anywhere in eight stylesheets
+landed on the board, whether you meant it or not.
 
-Two guards exist in `smoke.fast.mjs` and both have since caught real
-regressions: no two `@keyframes` share a name, and no board **kind** name
-(`cog`, `belt`, `exit`, `fragile`, …) is ever styled bare. A third catches a
-selector defined twice.
+### The fix: `src/view/css.ts`
 
-**The guards are not the fix.** They fire after the mistake. Prefixing
-structural classes would make the collision impossible to write rather than
-detectable after the fact, which ends the category instead of policing it —
-`doc/BOARD.md` [R-010], and the lesson in `doc/META.md`.
+A cell kind, an item kind or a minimap mark reaches the DOM **only** through
+`kindCls` or `markCls`, and arrives namespaced — `k-belt`, `m-w`. Every particle
+class is written in `particles.ts` and namespaced `fx-`. A hand-written
+`.belt {}` can no longer land on anything, and the wrong thing is now impossible
+to write rather than merely detectable. → `doc/META.md`, "End a category".
+
+Write a new board or minimap class through those functions. If you find yourself
+interpolating a kind into a class string by hand, that is the hazard coming back.
+
+### Five guards remain, as a net
+
+In `smoke.fast.mjs` and `test/harness.mjs`, each proven by planting its fault:
+
+| Guard | The bug it exists for |
+|---|---|
+| no two `@keyframes` share a name | treads running the dice animation |
+| no board kind is styled bare | `.cog` on the shop part |
+| no selector is defined twice | the cheese moon's stale palette |
+| no element wears a bare engine name | the prefix silently stopping being used |
+| no rule names a class nothing writes, and nothing is written with no rule | `.spark`, which had never existed |
+| no element is claimed by two animations | `.confetti` losing to `.star` |
+
+Their lists are **read out of the files that own them** (`namesIn()` in the
+harness) rather than transcribed. The one transcribed list was missing `oneway`
+for the mechanic's whole life, which made a bare `.oneway {}` the single board
+kind nothing could catch — a guard against transcription errors, containing one.
 
 ### Three more were inside the engine, where no guard looks
 

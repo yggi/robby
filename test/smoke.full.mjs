@@ -1,5 +1,6 @@
 import {
-  $, $$, D, NAV, check, checkBoardSizing, errors, raw, report, sweepBoard, tok, until, wait,
+  $, $$, D, NAV, check, checkBoardSizing, checkOneAnimationEach, errors, raw, report,
+  sweepBoard, sweepGenerated, tok, until, wait,
 } from './harness.mjs'
 
 /**
@@ -101,7 +102,7 @@ check('the run reaches the battery', cheering)
 check('hero reads next while the confetti is still falling', $('.play')?.classList.contains('next'))
 check('Robby celebrates', $('.bot')?.classList.contains('cheer'))
 check('Funke celebrates as well', $('.cat')?.classList.contains('cheer'))
-check('the celebration actually throws confetti', $$('.confetti').length > 20)
+check('the celebration actually throws confetti', $$('.fx-confetti').length > 20)
 /**
  * The real rule behind the dot-on-his-face bug: `.fx` paints above the robot,
  * so any effect anchored to *his* tile is drawn over him. Rings and masked
@@ -121,8 +122,8 @@ check('nothing anchored to his tile starts at its centre',
   // rather than for a list of allowed classes means a new particle type cannot
   // quietly reintroduce the dot-on-his-face bug.
   onHisTile.every((el) => [...el.children].every((c) =>
-    c.classList.contains('shock') ||
-    c.classList.contains('pickring') ||
+    c.classList.contains('fx-shock') ||
+    c.classList.contains('fx-pickring') ||
     (c.style.getPropertyValue('--dx') !== '' && c.style.getPropertyValue('--dy') !== ''))))
 check('Funke does not upstage Robby', !$('.cat')?.classList.contains('star'))
 // she used to celebrate standing inside him, which laid her tail across his face
@@ -288,7 +289,7 @@ $('.play').click() // Next
 await wait(320)
 check('pressing next launches the rocket', $('.launchpad')?.classList.contains('launch'))
 check('the pad shakes under the burn', $('.board')?.classList.contains('liftoff'))
-check('and it throws up an exhaust cloud', $$('.plume').length > 10)
+check('and it throws up an exhaust cloud', $$('.fx-plume').length > 10)
 check('it does not go up the same way twice',
   /lift[123]/.test($('.launchpad')?.className ?? ''))
 await wait(3400)
@@ -399,8 +400,8 @@ $$('.room')[1].click()   // Bramble: a way through that is shut for good
 await wait(250)
 check('forest theme applied', $('.scene')?.dataset.theme === 'forest')
 check('the blocked way is drawn, not just missing', !!$('.thicket .thicket-svg'))
-check('the blocked tile is dimmed rather than removed', !!$('.tile.blocked'))
-check('a blocked tile is never walkable', $$('.tile.blocked').every((t) => {
+check('the blocked tile is dimmed rather than removed', !!$('.tile.k-blocked'))
+check('a blocked tile is never walkable', $$('.tile.k-blocked').every((t) => {
   const x = t.style.getPropertyValue('--x'), y = t.style.getPropertyValue('--y')
   return !$$('.plans .vec').some(
     (v) => v.style.getPropertyValue('--x') === x && v.style.getPropertyValue('--y') === y)
@@ -410,8 +411,9 @@ $('.gamebar .ghostbtn').click(); await wait(200)
 $$('.room')[4].click()   // Crossroads: three parts, any order
 await wait(250)
 sweepBoard() // a room carrying every part kind at once
-check('three parts on the floor', $$('.item.cog, .item.coil, .item.core').length === 3)
-check('parts are distinguishable', !!$('.item.cog') && !!$('.item.coil') && !!$('.item.core'))
+sweepGenerated()
+check('three parts on the floor', $$('.item.k-cog, .item.k-coil, .item.k-core').length === 3)
+check('parts are distinguishable', !!$('.item.k-cog') && !!$('.item.k-coil') && !!$('.item.k-core'))
 
 $('.gamebar .ghostbtn').click(); await wait(200)
 // index 7, not 8: the endless room is appended after the eight authored ones
@@ -442,7 +444,7 @@ for (let i = 0; i < 48 && !refused; i++) {
   await wait(110)
   refused = !!$('.think')?.classList.contains('short')
   launched ||= !!$('.launchpad')?.classList.contains('launch')
-  sawRing ||= !!$('.pickring')
+  sawRing ||= !!$('.fx-pickring')
   sawFly ||= !!$('.item.taken')
 }
 check('a part picked up ticks off in the bubble', $$('.think .want.got').length >= 1)
@@ -453,5 +455,9 @@ await wait(D.ret + 900)
 
 // over every board this suite opened, not just whichever screen it ended on
 checkBoardSizing()
+// The fast suite runs this too, but only ever over the source half: particles
+// are throwaway DOM and it never plays a level far enough to see one. Here the
+// celebration has actually happened, so the confetti is real.
+checkOneAnimationEach()
 
 report('SMOKE')

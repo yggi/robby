@@ -232,11 +232,14 @@ src/
     editor.ts      the editor's model: drafts, painting, the verdict
   view/            Svelte + DOM. Owns time, easing, sound, everything visible
     game.svelte.ts the single state store; screens, run playback, camera, economy
-    Board.svelte   the world: tiles, sprites, particles, the plan
+    Board.svelte   the world: tiles, sprites, the plan, the camera (449 lines)
     Console, GameBar, Menu, Rooms, Store, Editor, Intro, MiniMap
+    css.ts         the only road from a name the engine owns to a DOM class
+    particles.ts   every burst the board throws, as throwaway DOM
+    roam.ts        where Funke can get to and where she goes next — pure, tested
     audio, bits, colors, decor, fly, geom, icons, parts, props
-                   nine plain modules, ~1,200 lines — a third of the view, and
-                   the part that gets forgotten when the view is described
+                   twelve plain modules now, ~1,450 lines — a third of the view,
+                   and the part that gets forgotten when the view is described
   styles/          eight stylesheets, imported in a fixed order
 test/              the jsdom harness and the two smoke suites (.mjs)
 ```
@@ -252,7 +255,7 @@ Do not sort the imports.
 
 ## 11. Conventions
 
-**Name collisions are the recurring failure mode of this codebase.** Six so far:
+**Name collisions were the recurring failure mode of this codebase.** Seven:
 
 | Collision | Symptom |
 | --- | --- |
@@ -262,11 +265,19 @@ Do not sort the imports.
 | `.tray` | the store's parts bin gave the arrow tray `overflow-x: auto` |
 | `.cog` | turned the cog *part* into a 22px spinning disc |
 | `.grid` | the editor and the level select both used it |
+| `.star` | a third of the confetti twinkled in place instead of falling |
 
-Board kinds become element classes, so a bare rule on `cog` or `belt` or `exit`
-lands on the board whether you meant it or not. Two guards exist and both have
-caught real regressions. The full list of conventions, each with the bug that
-bought it, is `doc/design/code/conventions.md`.
+The mechanism was that names the engine owns became element classes verbatim, so
+a bare rule on `cog` or `belt` or `exit` landed on the board whether you meant it
+or not. **`src/view/css.ts` ended that.** A cell kind, an item kind or a minimap
+mark reaches the DOM only through `kindCls` or `markCls` and arrives as `k-belt`
+or `m-w`; every particle class is written in `particles.ts` and namespaced `fx-`.
+A hand-written `.belt {}` can no longer land on anything.
+
+Five guards remain as a net, and their lists are **read from the files that own
+them** rather than transcribed — the one transcribed list was missing `oneway`
+for the mechanic's whole life. The full list of conventions, each with the bug
+that bought it, is `doc/design/code/conventions.md`.
 
 ## 12. Things that are deliberate, not oversights
 

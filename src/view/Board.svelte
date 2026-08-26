@@ -1,13 +1,15 @@
 <script lang="ts">
   import { at } from '../engine/parse'
-  import { passable } from '../engine/simulate'
   import {
-    DELTA, OBJECTIVES, around, neighbours, posKey, type Dir, type ItemKind,
+    DELTA, OBJECTIVES, around, posKey, type Dir, type ItemKind,
   } from '../engine/types'
   import { flyBits } from './bits'
   import { DIR_ANGLE, DIR_COLOR } from './colors'
+  import { kindCls } from './css'
   import type { Game } from './game.svelte'
   import { geom } from './geom'
+  import { celebrate, exhaust, pickup, puff } from './particles'
+  import { nextStroll, routesFrom } from './roam'
 import { propsFor, scatterProps } from './props'
   import { sfx } from './audio'
 import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG, THICKET_SVG } from './icons'
@@ -146,34 +148,12 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
   )
 
   /**
-   * When nothing is happening, Funke explores.
-   *
-   * She used to pick a tile within two squares and slide to it, which took her
-   * straight through walls — a cat teleporting across a corner. Now she walks:
-   * a breadth-first search finds a real route from where she is to somewhere
-   * she has not been lately, and she takes it a tile at a time.
+   * When nothing is happening, Funke explores. Where she *can* go and where
+   * she goes next are both in `./roam`, which is pure and unit-tested; what is
+   * left here is the clock — how fast she pads and how long she waits.
    */
-  const reachable = $derived.by(() => {
-    const home = g.trace.frames.length ? g.trace.frames[0].from : st.pos
-    const seen = new Map<string, { x: number; y: number }[]>()
-    seen.set(posKey(home), [])
-    const queue = [home]
-    while (queue.length) {
-      const p = queue.shift()!
-      const path = seen.get(posKey(p))!
-      if (path.length >= 6) continue // she does not wander off across the room
-      for (const n of neighbours(p)) {
-        if (seen.has(posKey(n))) continue
-        // the engine's own predicate, not a shorter one written out here: this
-        // used to test wall and blocked only, so she padded across shut gates
-        // and bridges that had already fallen
-        if (!passable(st.world, n)) continue
-        seen.set(posKey(n), [...path, n])
-        queue.push(n)
-      }
-    }
-    return seen
-  })
+  const home = $derived(g.trace.frames.length ? g.trace.frames[0].from : st.pos)
+  const reachable = $derived(routesFrom(st.world, home))
 
   let stroll = $state<{ x: number; y: number } | null>(null)
   let padding = $state(false)
@@ -244,22 +224,8 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
     const id = setInterval(
       () => {
         if (padding) return // still on her way somewhere
-        const here = stroll ?? (g.trace.frames.length ? g.trace.frames[0].from : st.pos)
-        const from = reachable.get(posKey(here))
-        // routes are held from Robby's tile, so re-root them on hers
-        const options = [...reachable.entries()]
-          .filter(([k, route]) => route.length > 0 && k !== posKey(here))
-          .filter(([k]) => !lately.includes(k))
-        const pick = (options.length ? options : [...reachable.entries()].slice(1))[
-          Math.floor(Math.random() * Math.max(1, options.length))
-        ]
-        if (!pick) return
-        // walk out to Robby's tile and on to the target, so every step is a
-        // neighbour of the last and she never crosses a wall
-        const back = (from ?? []).slice().reverse().slice(1).concat(
-          (from ?? []).length ? [g.trace.frames.length ? g.trace.frames[0].from : st.pos] : [],
-        )
-        padAlong([...back, ...pick[1]])
+        const walk = nextStroll(reachable, stroll ?? home, home, lately)
+        if (walk) padAlong(walk)
       },
       2600 + Math.random() * 2400,
     )
@@ -324,131 +290,32 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
   const fx = $derived(g.focus ? g.focus.x : (W - 1) / 2)
   const fy = $derived(g.focus ? g.focus.y : (H - 1) / 2)
 
-  // Particles are throwaway DOM — cheaper and simpler than reactive lists.
-  // Guarded by frame index so a re-render can never fire the same burst twice.
+  // Particles are throwaway DOM — cheaper and simpler than reactive lists, and
+  // they all live in `./particles`. Guarded by frame index so a re-render can
+  // never fire the same burst twice.
   let lastFx = -2
   $effect(() => {
     const e = ev
-    const at = g.playhead
-    if (!boardEl || at === lastFx) return
-    lastFx = at
-    if (e === 'bonk') puff(st.pos.x + bd.x * 0.5, st.pos.y + bd.y * 0.5)
+    const frame = g.playhead
+    if (!boardEl || frame === lastFx) return
+    lastFx = frame
+    if (e === 'bonk') puff(boardEl, st.pos.x + bd.x * 0.5, st.pos.y + bd.y * 0.5)
     if (e === 'win') {
       throwParty(st.pos)
-      celebrate()
+      celebrate(boardEl, st.pos.x, st.pos.y)
+      // not part of the celebration: this is the economy paying out, and it
+      // flies to a counter that lives outside the board entirely
+      if (botEl) flyBits(botEl.getBoundingClientRect(), g.reward, g.collectBit)
     }
-    if (e === 'pickup') pickup(st.pos.x, st.pos.y)
+    if (e === 'pickup') pickup(boardEl, st.pos.x, st.pos.y)
     if (shortHanded) sfx.denied()
   })
 
-  function spawn(cls: string, x?: number, y?: number) {
-    const el = document.createElement('div')
-    el.className = cls
-    if (x !== undefined) {
-      el.style.setProperty('--x', String(x))
-      el.style.setProperty('--y', String(y))
-    } else el.style.cssText = 'inset:0;width:100%;height:100%;translate:0 0;'
-    boardEl.appendChild(el)
-    return el
-  }
-
-  /** A ring and a scatter of sparks where the thing was. */
-  function pickup(x: number, y: number) {
-    const el = spawn('fx', x, y)
-    const ring = document.createElement('span')
-    ring.className = 'pickring'
-    el.appendChild(ring)
-    for (let i = 0; i < 8; i++) {
-      const p = document.createElement('span')
-      p.className = 'spark'
-      p.style.setProperty('--sc', i % 2 ? '#ffd9a8' : '#fff3d6')
-      const a = (Math.PI * 2 * i) / 8 + 0.4
-      p.style.setProperty('--dx', Math.cos(a) * 38 + 'px')
-      p.style.setProperty('--dy', Math.sin(a) * 38 - 8 + 'px')
-      p.style.animationDelay = i * 18 + 'ms'
-      el.appendChild(p)
-    }
-    setTimeout(() => el.remove(), 900)
-  }
-
-  /** The burn: a rolling cloud out from under it, and the pad shaking. */
-  function exhaust(x: number, y: number) {
-    if (!boardEl) return
-    boardEl.classList.add('liftoff')
-    setTimeout(() => boardEl?.classList.remove('liftoff'), 1300)
-    const el = spawn('fx', x, y)
-    for (let i = 0; i < 22; i++) {
-      const p = document.createElement('span')
-      p.className = 'plume'
-      const size = 14 + Math.random() * 26
-      const a = Math.PI + (Math.random() - 0.5) * Math.PI * 1.5
-      p.style.width = p.style.height = `${size}px`
-      p.style.setProperty('--dx', Math.cos(a) * (30 + Math.random() * 70) + 'px')
-      p.style.setProperty('--dy', Math.abs(Math.sin(a)) * (10 + Math.random() * 40) + 'px')
-      p.style.setProperty('--t', 900 + Math.random() * 1100 + 'ms')
-      p.style.animationDelay = 380 + Math.random() * 900 + 'ms'
-      el.appendChild(p)
-    }
-    setTimeout(() => el.remove(), 3200)
-  }
-
   $effect(() => {
-    if (!launching) return
+    if (!launching || !boardEl) return
     const spot = exits[0]
-    if (spot) exhaust(spot.x, spot.y)
+    if (spot) exhaust(boardEl, spot.x, spot.y)
   })
-
-  function puff(x: number, y: number) {
-    const el = spawn('fx', x, y)
-    for (let i = 0; i < 7; i++) {
-      const p = document.createElement('span')
-      p.className = 'dust'
-      const a = (Math.PI * 2 * i) / 7 + Math.random()
-      p.style.setProperty('--dx', Math.cos(a) * 34 + 'px')
-      p.style.setProperty('--dy', Math.sin(a) * 34 - 6 + 'px')
-      p.style.animationDelay = Math.random() * 60 + 'ms'
-      el.appendChild(p)
-    }
-    setTimeout(() => el.remove(), 720)
-  }
-
-  /** The full payoff: light, shockwaves, rays, confetti, and the bits. */
-  function celebrate() {
-    const { x, y } = st.pos
-
-    const flash = spawn('fx flash')
-    setTimeout(() => flash.remove(), 800)
-
-    const rings = spawn('fx', x, y)
-    for (let i = 0; i < 3; i++) {
-      const r = document.createElement('span')
-      r.className = 'shock'
-      r.style.animationDelay = i * 190 + 'ms'
-      rings.appendChild(r)
-    }
-    setTimeout(() => rings.remove(), 1700)
-
-    const rays = spawn('fx rays', x, y)
-    setTimeout(() => rays.remove(), 2400)
-
-    const cols = ['#ff7b45', '#ffd23f', '#4dc8ff', '#ff6bd6', '#7ef07a', '#f4e6c8']
-    const el = spawn('fx')
-    for (let i = 0; i < 38; i++) {
-      const p = document.createElement('span')
-      p.className = i % 3 === 0 ? 'confetti star' : 'confetti'
-      p.style.background = cols[i % cols.length]
-      p.style.left = 6 + Math.random() * 88 + '%'
-      p.style.top = '14%'
-      p.style.setProperty('--dx', Math.random() * 240 - 120 + 'px')
-      p.style.setProperty('--rot', Math.random() * 1080 - 540 + 'deg')
-      p.style.setProperty('--t', 1200 + Math.random() * 1000 + 'ms')
-      p.style.animationDelay = Math.random() * 320 + 'ms'
-      el.appendChild(p)
-    }
-    setTimeout(() => el.remove(), 2800)
-
-    if (botEl) flyBits(botEl.getBoundingClientRect(), g.reward, g.collectBit)
-  }
 </script>
 
 <div
@@ -468,7 +335,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
   <div class="layer floors">
     {#each cells as c (c.key)}
       <div
-        class="tile {c.kind}"
+        class="tile {kindCls(c.kind)}"
         class:willfall={c.collapsed && build}
         class:gone={c.collapsed && !build}
         style="--x:{c.x}; --y:{c.y}; --in:{c.in}; --rad:{c.rad}"
@@ -539,7 +406,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
          up, so it vanished with no animation at all. -->
     {#each g.start.items as item (item.id)}
       <div
-        class="item {item.kind}"
+        class="item {kindCls(item.kind)}"
         class:taken={!st.items.some((i) => i.id === item.id)}
         style="--x:{item.at.x}; --y:{item.at.y}"
       >
