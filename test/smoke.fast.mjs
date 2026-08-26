@@ -1,4 +1,6 @@
-import { $, $$, check, raw, report, tok, until, wait, window } from './harness.mjs'
+import {
+  $, $$, check, checkBoardSizing, raw, report, sweepBoard, tok, until, wait, window,
+} from './harness.mjs'
 
 /**
  * Navigate and wait for the screen to actually be there. Screens cross-fade, so
@@ -10,6 +12,10 @@ async function go(click, ready) {
   click()
   const ok = await until('the next screen', ready, 4000, 40)
   if (!ok) check('a screen failed to open', false)
+  // Every board this suite opens feeds the sizing check at the end. Doing it
+  // here rather than at call sites means a room added later is covered without
+  // anybody remembering to cover it.
+  sweepBoard()
 }
 
 /**
@@ -525,22 +531,8 @@ check('and goes up three different ways',
 check('the tread is a scrolling belt, not a hopping plate',
   /\.treadbelt\{/.test(raw) && /@keyframes treadscroll/.test(raw))
 
-/**
- * jsdom has no layout engine, so nothing here can measure a box. This checks the
- * rule instead: every element placed at a board coordinate must be matched by a
- * selector that sizes it to one tile. The giant rocket was exactly this — a
- * board element missing from the sizing rule, so it sized against the board.
- */
-const sized = new Set()
-for (const m of raw.matchAll(/([^{}@]+)\{[^{}]*width:\s*var\(--c\)/g))
-  for (const sel of m[1].split(',')) {
-    const c = sel.trim().match(/^\.([\w-]+)/)
-    if (c) sized.add(c[1])
-  }
-const placed = $$('.board [style*="--x"]')
-const unsized = placed.filter((el) => ![...el.classList].some((c) => sized.has(c)))
-check(`every board element is sized to one tile (${placed.length} checked)`, unsized.length === 0)
-if (unsized.length) console.log('     unsized:', unsized.map((e) => e.className).join(', '))
+// over every board this suite opened, not just whichever screen it ended on
+checkBoardSizing()
 
 check('no screen is re-rendered after it has gone', inert === 0)
 

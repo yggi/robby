@@ -1,4 +1,6 @@
-import { $, $$, D, NAV, check, errors, raw, report, tok, until, wait } from './harness.mjs'
+import {
+  $, $$, D, NAV, check, checkBoardSizing, errors, raw, report, sweepBoard, tok, until, wait,
+} from './harness.mjs'
 
 /**
  * The full behavioural suite: plays levels through, watches celebrations,
@@ -256,6 +258,7 @@ check('the test world lists one room per mechanic', $$('.room').length === 9)
 $$('.room')[8].click()
 await wait(NAV)
 check('rocket room is the ship theme', $('.scene')?.dataset.theme === 'ship')
+sweepBoard() // the rocket and its pad, the elements the check exists for
 check('the rocket is on the board', !!$('.launchpad .rocket'))
 check('rocket is unarmed while the battery is still out there',
   !$('.launchpad')?.classList.contains('armed'))
@@ -351,6 +354,7 @@ check('she never celebrates out on a wall', offPath === 0)
 // index 7 is the eighth room; index 8 is the endless one that follows it
 $$('.room')[7].click()
 await wait(NAV)
+sweepBoard()
 check('the Lab ends at a rocket', !!$('.launchpad .rocket'))
 ;['right', 'down', 'down', 'up', 'right', 'up'].forEach((d) => tok(d)?.click())
 await wait(80)
@@ -405,6 +409,7 @@ check('a blocked tile is never walkable', $$('.tile.blocked').every((t) => {
 $('.gamebar .ghostbtn').click(); await wait(200)
 $$('.room')[4].click()   // Crossroads: three parts, any order
 await wait(250)
+sweepBoard() // a room carrying every part kind at once
 check('three parts on the floor', $$('.item.cog, .item.coil, .item.core').length === 3)
 check('parts are distinguishable', !!$('.item.cog') && !!$('.item.coil') && !!$('.item.core'))
 
@@ -446,21 +451,7 @@ check('the rocket refuses when it is short', refused)
 check('and it did not launch', !launched)
 await wait(D.ret + 900)
 
-/**
- * jsdom has no layout engine, so nothing here can measure a box. This checks the
- * rule instead: every element placed at a board coordinate must be matched by a
- * selector that sizes it to one tile. The giant rocket was exactly this — a
- * board element missing from the sizing rule, so it sized against the board.
- */
-const sized = new Set()
-for (const m of raw.matchAll(/([^{}@]+)\{[^{}]*width:\s*var\(--c\)/g))
-  for (const sel of m[1].split(',')) {
-    const c = sel.trim().match(/^\.([\w-]+)/)
-    if (c) sized.add(c[1])
-  }
-const placed = $$('.board [style*="--x"]')
-const unsized = placed.filter((el) => ![...el.classList].some((c) => sized.has(c)))
-check(`every board element is sized to one tile (${placed.length} checked)`, unsized.length === 0)
-if (unsized.length) console.log('     unsized:', unsized.map((e) => e.className).join(', '))
+// over every board this suite opened, not just whichever screen it ended on
+checkBoardSizing()
 
 report('SMOKE')

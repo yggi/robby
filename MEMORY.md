@@ -85,6 +85,20 @@ resolves against before changing it.
 collects them (`errors` export), because a suite can otherwise pass while the
 app throws on every frame.
 
+**A check that can pass on an empty sample will eventually pass on an empty
+sample.** The board-sizing guard — the one that catches a new board element
+missing from the sizing rule — read `.board [style*="--x"]` once, at the end of
+the suite. The fast suite ends in the editor, where there is no board, so it
+was checking *nothing*, and had been for as long as it had existed. It said so
+on every run, in a cheerfully passing line reading `(0 checked)`, and the number
+went unread because the line said `ok`.
+
+It now lives in the harness as `sweepBoard()` / `checkBoardSizing()`: samples
+are collected on every navigation and asserted over at the end, and **an empty
+sample is a failure**, not a pass. The general form is worth keeping: if a check
+scrapes the DOM for its subjects, it has to assert it found some. Put the count
+in the label and make the count itself an assertion.
+
 ## Sizing and layout
 
 Everything on the board is positioned from one variable:

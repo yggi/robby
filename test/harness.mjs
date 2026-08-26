@@ -132,6 +132,45 @@ const watchdog = setTimeout(() => {
 }, Number(process.env.SMOKE_INNER_MS ?? 280_000))
 watchdog.unref?.()
 
+/**
+ * Every element placed at a board coordinate must be matched by a selector that
+ * sizes it to one tile. jsdom has no layout engine, so nothing here can measure
+ * a box; this checks the rule instead. The giant rocket was exactly this — a
+ * board element missing from the sizing rule, so it sized against the whole
+ * board.
+ *
+ * Sampled all through the run rather than read once at the end, because the
+ * board only exists while a level is open, and a single read is really a
+ * question about whichever screen the suite happened to stop on. The fast suite
+ * stopped on the editor, so its copy of this check looked at *nothing* — and
+ * announced it, in a cheerfully passing line reading `(0 checked)`, until
+ * somebody read the number. Hence two things: `sweepBoard()` on every
+ * navigation, and a final assertion that a sample of nothing is not a pass.
+ */
+const boardSeen = new Map()
+
+/** Record whatever is on the board right now. Safe to call with no board up. */
+export function sweepBoard() {
+  for (const el of $$('.board [style*="--x"]')) boardSeen.set(el.className, el)
+  return boardSeen.size
+}
+
+/** Assert over everything `sweepBoard()` has seen. Call once, at the end. */
+export function checkBoardSizing() {
+  sweepBoard() // whatever is up right now counts too
+  const sized = new Set()
+  for (const m of raw.matchAll(/([^{}@]+)\{[^{}]*width:\s*var\(--c\)/g))
+    for (const sel of m[1].split(',')) {
+      const c = sel.trim().match(/^\.([\w-]+)/)
+      if (c) sized.add(c[1])
+    }
+  const placed = [...boardSeen.values()]
+  const unsized = placed.filter((el) => ![...el.classList].some((c) => sized.has(c)))
+  check(`board elements were sampled at all (${placed.length} kinds)`, placed.length > 0)
+  check(`every board element is sized to one tile (${placed.length} checked)`, unsized.length === 0)
+  if (unsized.length) console.log('     unsized:', unsized.map((e) => e.className).join(', '))
+}
+
 /** Print the tally and exit. Called by whichever suite imported the harness. */
 export function report(label) {
   clearTimeout(watchdog)
