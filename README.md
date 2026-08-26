@@ -72,5 +72,25 @@ broken level.
 Nothing else in this codebase matters as much as that. If you are about to
 write something that judges whether a level is any good, ask the solver instead.
 
-See `HANDOFF.md` for the architecture and the reasoning, `MEMORY.md` for the
-facts that are easy to get wrong, and `LOG.md` for how it got here.
+## Where the documentation is
+
+`CLAUDE.md` is the entrypoint and says what to read in what order. Everything
+else lives in `doc/`:
+
+| | |
+| --- | --- |
+| `doc/MEMORY.md` | what the project *is* — durable facts, and the index to `doc/design/` |
+| `doc/META.md` | what building it taught us about building it, each lesson with its scar |
+| `doc/NOTES.md` | what is unresolved right now |
+| `doc/BOARD.md` | what to do next |
+| `doc/HISTORY.md` | how it got here — the arc, at low resolution |
+| `doc/LOG.md` | what happened in the last few sessions, in detail |
+
+`doc/design/` holds the detail in four clusters — **game**, **feel**, **code**
+and **testing** — each with a page that indexes its own tree. Start at
+`doc/design/game.md` if you want to know what the game is, or
+`doc/design/code.md` if you want to change it.
+
+The documentation tree is checked by `src/doc.test.ts`, which runs in
+`npm test`: every path written down here has to resolve, and every index has to
+match its tree.
