@@ -1,0 +1,35 @@
+/* ============================================================
+   Two visual languages, deliberately unalike.
+
+   THE WORLD   illustrative, themed, continuous, alive. A place.
+               It changes completely from level to level.
+   THE CONSOLE matte charcoal, flat, geometric, dead still. The
+               remote control in the kid's hands — identical in
+               every level, forever.
+   ============================================================ */
+
+:root {
+  --power:   #ff7b45;      /* the colour of energy — constant everywhere */
+  --go:      #17b9a0;
+  --alarm:   #e0483a;
+  --gold:    #ffc93c;
+  --console: #191d26;
+  --console2:#242a36;
+  --chalk:   #e8edf2;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
+  background: var(--console);
+  font-family: 'Baloo 2', ui-rounded, 'Fredoka', system-ui, sans-serif;
+  font-synthesis: none;
+  touch-action: manipulation;
+}
+#app { height: 100dvh; position: relative; overflow: hidden; }
+/* every screen occupies the whole app, so one can cross-fade over another */
+.screen { position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto; }
+/* not `.screen.play` — that collides with the play button, and a bare
+   `.play` selector then matches the whole screen */
+.screen.ingame { grid-template-rows: auto 1fr auto; }
+.screen > .menu, .screen > .rooms, .screen > .store { grid-row: 1 / -1; }

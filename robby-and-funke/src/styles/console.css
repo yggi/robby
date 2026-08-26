@@ -1,0 +1,326 @@
+/* ══════════════════════════ THE CONSOLE ══════════════════════════ */
+
+.console {
+  position: relative; z-index: 10;
+  display: grid; justify-items: center; gap: 14px;
+  padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, var(--console2) 0%, var(--console) 46%);
+  border-top: 2px solid #ffffff14;
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -16px 34px #00000066;
+}
+.console::before {                        /* machined highlight along the lip */
+  content: ''; position: absolute; top: 4px; left: 14%; right: 14%; height: 2px;
+  border-radius: 2px; background: linear-gradient(90deg, transparent, #ffffff20, transparent);
+}
+
+.pips { display: flex; gap: 8px; align-items: center; }
+.pip { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0;
+       background: #ffffff24; cursor: pointer; transition: 220ms; }
+.pip.done { background: var(--power); }
+.pip.now  { background: var(--chalk); width: 21px; border-radius: 4px; }
+
+.strip { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
+.slot {
+  width: 44px; height: 44px; border: 0; padding: 0; border-radius: 12px;
+  background: #ffffff0d; box-shadow: inset 0 0 0 2px #ffffff17;
+  display: grid; place-items: center; cursor: pointer;
+  transition: background 160ms, scale 200ms, box-shadow 160ms;
+}
+.flying {
+  position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none;
+  width: 44px; height: 44px; display: grid; place-items: center;
+}
+.flying svg { width: 62%; fill: var(--dc, var(--chalk)); filter: drop-shadow(0 2px 6px #00000080); }
+
+.slot.filled { background: #ffffff14; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--dc) 55%, transparent); }
+.slot.lit { background: var(--dc); scale: 1.16;
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--dc) 28%, transparent); }
+.slot.blame {
+  box-shadow: inset 0 0 0 2px var(--alarm), 0 0 0 3px var(--alarm);
+  animation: throb 760ms infinite, nudge 760ms infinite;
+}
+@keyframes throb {
+  50% { box-shadow: inset 0 0 0 2px var(--alarm), 0 0 0 3px var(--alarm), 0 0 0 11px #e0483a2e; }
+}
+@keyframes nudge { 25% { translate: -2px 0; } 60% { translate: 2px 0; } }
+.slot svg { width: 60%; fill: var(--dc, var(--chalk)); }
+.slot.lit svg { fill: #0d1014; }
+
+.controls { display: flex; align-items: center; gap: clamp(14px, 6vw, 34px); }
+.tray { display: flex; gap: 8px; }
+.token {
+  position: relative; width: 60px; height: 60px; border: 0; padding: 0;
+  border-radius: 16px; background: var(--console2);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--dc) 42%, #0e1117), inset 0 1px 0 #ffffff1a;
+  display: grid; place-items: center; cursor: pointer;
+  transition: translate 80ms, box-shadow 80ms, opacity 200ms;
+}
+.token:active { translate: 0 4px; box-shadow: 0 1px 0 color-mix(in srgb, var(--dc) 42%, #0e1117); }
+.token[disabled] { opacity: .26; box-shadow: none; }
+.token svg { width: 52%; fill: var(--dc); }
+.token b {
+  position: absolute; right: -5px; top: -5px; min-width: 22px; height: 22px;
+  padding: 0 5px; border-radius: 11px; background: var(--dc); color: #12151c;
+  font-size: 13px; font-weight: 700; display: grid; place-items: center;
+}
+
+/* The only circle on a console of squares. */
+.play {
+  width: 84px; height: 84px; border: 0; padding: 0; border-radius: 50%;
+  background: var(--go); color: #06201f; box-shadow: 0 7px 0 #0d8571;
+  display: grid; place-items: center; cursor: pointer;
+  transition: translate 80ms, box-shadow 80ms, background 260ms;
+}
+.play:active { translate: 0 5px; box-shadow: 0 1px 0 #0d8571; }
+.play.ready { animation: invite 1.5s ease-in-out infinite; }
+@keyframes invite { 50% { box-shadow: 0 7px 0 #0d8571, 0 0 0 13px #17b9a026; } }
+.play.running { background: var(--chalk); box-shadow: 0 7px 0 #8b929c; }
+.play.next    { background: var(--power); box-shadow: 0 7px 0 #c8552a; animation: invite 1.2s infinite; }
+.play svg { width: 40%; fill: currentColor; }
+
+button:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+
+/* ---- the Mechanical Forest floor, seen from above ---- */
+.forestfloor {
+  position: absolute; inset: -2%;
+  background:
+    radial-gradient(circle at 22% 30%, #ffffff08 0 40px, transparent 41px),
+    radial-gradient(circle at 74% 68%, #ffffff06 0 56px, transparent 57px),
+    linear-gradient(152deg, #24402e 0%, #1b3325 54%, #142619 100%);
+}
+.canopy {
+  position: absolute; border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, #4e8f57 0%, #376b41 46%, #24492c 78%, #1b3823 100%);
+  box-shadow: 0 10px 26px #00000066, inset 0 0 30px #00000038;
+  animation: canopysway var(--t) ease-in-out infinite;
+}
+.canopy::before {                      /* leaf clumps, so it isn't just a disc */
+  content: ''; position: absolute; inset: 6%; border-radius: 50%;
+  background:
+    radial-gradient(circle at 26% 22%, #5aa465 0 22%, transparent 23%),
+    radial-gradient(circle at 72% 34%, #4b8f56 0 18%, transparent 19%),
+    radial-gradient(circle at 44% 72%, #457f4f 0 20%, transparent 21%),
+    radial-gradient(circle at 78% 74%, #3c7247 0 15%, transparent 16%);
+}
+.bolt-hub {
+  position: absolute; inset: 0; margin: auto; width: 16%; height: 16%;
+  border-radius: 50%; background: #b9c6d1;
+  box-shadow: inset 0 0 0 3px #7d8b98, 0 0 10px #00000059;
+}
+@keyframes canopysway { 50% { transform: scale(1.03) rotate(1.6deg); } }
+
+.trunk {
+  position: absolute; height: 17px; border-radius: 9px;
+  background: linear-gradient(180deg, #b6c2cd, #7d8b98 60%, #5b6772);
+  box-shadow: 0 5px 12px #00000059;
+}
+.trunk::after {
+  content: ''; position: absolute; inset: 4px 8px; border-radius: 6px;
+  background: repeating-linear-gradient(90deg, #ffffff14 0 3px, transparent 3px 13px);
+}
+.fern {
+  position: absolute; width: 26px; height: 26px; opacity: .5;
+  background:
+    radial-gradient(ellipse 50% 14% at 50% 50%, #57a05f 0 60%, transparent 61%),
+    radial-gradient(ellipse 14% 50% at 50% 50%, #4a8b53 0 60%, transparent 61%);
+}
+.sap {
+  position: absolute; border-radius: 50%; background: #b07dff;
+  box-shadow: 0 0 12px #b07dffcc;
+  animation: sapglow var(--t) ease-in-out infinite;
+}
+@keyframes sapglow { 0%, 100% { opacity: .45; } 50% { opacity: 1; transform: scale(1.18); } }
+.pool.green {
+  background: radial-gradient(circle, #c9ffd45c 0%, #6cd98c1f 42%, transparent 70%);
+}
+
+/* ---- conveyor belts ----
+   The chevrons scroll the way the belt runs, so which way it goes is readable
+   at a glance and while standing still. Stepping on costs one instruction;
+   everything after that is free, which is the point of the thing.
+
+   The whole belt is drawn horizontally and the wrapper is rotated, so one set
+   of keyframes serves all four directions. */
+.beltwrap {
+  position: absolute; inset: var(--in); border-radius: var(--rad);
+  overflow: hidden;
+}
+/* The rotation belongs on the layers, never on the wrapper: rotating the
+   wrapper rotates its clip too, so a north or south belt had its rounded
+   corners and its seam against the neighbouring tile turned on their side. */
+.beltwrap > i {
+  position: absolute;
+  /* oversized, because a rotated layer must still cover the square it sits in */
+  inset: -40%;
+  rotate: var(--spin, 0deg);
+}
+.beltwrap .band {
+  background: repeating-linear-gradient(90deg, #3a342e 0 13px, #2b2622 13px 26px);
+  animation: beltroll 760ms linear infinite;
+}
+.beltwrap .arrows {
+  background: repeating-linear-gradient(90deg,
+    transparent 0 7px, #e0913f 7px 12px, transparent 12px 26px);
+  animation: beltroll 760ms linear infinite;
+  opacity: .9;
+}
+.beltwrap .lip {
+  inset: auto 0 auto 0; height: 12%;
+  background: #6f6157; box-shadow: inset 0 -2px 0 #00000059;
+}
+.beltwrap .lip.a { top: 0; } .beltwrap .lip.b { bottom: 0; }
+@keyframes beltroll { to { background-position-x: 26px; } }
+
+/* ---- a way through that is shut for good ---- */
+.thicket { position: absolute; inset: var(--in); display: grid; place-items: center; }
+.thicket-svg { width: 100%; height: 100%; }
+.tile.blocked::before {
+  /* the path visibly continues, it is simply impassable */
+  filter: brightness(.42) saturate(.5);
+}
+
+/* ---- parts ---- */
+.part { width: 100%; height: 100%; }
+.item.cog .cellwrap::before,
+.item.coil .cellwrap::before,
+.item.core .cellwrap::before { background: radial-gradient(circle, #ffffff40 0%, transparent 62%); }
+.item.cog .part { filter: drop-shadow(0 0 8px #cfd8e0aa); }
+.item.coil .part { filter: drop-shadow(0 0 9px #b07dffaa); }
+.item.core .part { filter: drop-shadow(0 0 9px #4bd98aaa); }
+.item .part { width: 46%; height: 46%; }
+
+/* ---- Robby's thought bubble ----
+   What he is after, above his head, in the order the level wants it. It used to
+   be pinned to the rocket, which was wrong twice over: the rocket is not the
+   one doing the wanting, and rooms without a rocket had nowhere to show it. */
+.think {
+  position: absolute;
+  bottom: 96%; left: 50%; translate: -50% 0;
+  white-space: nowrap;
+  display: flex; align-items: center; gap: calc(var(--c) * .07);
+  padding: calc(var(--c) * .13) calc(var(--c) * .16);
+  border-radius: 999px;
+  background: #f6f2e8;
+  box-shadow: 0 3px 0 #bdb6a5, 0 8px 18px #00000059;
+  animation: thinkin 260ms cubic-bezier(.3,1.5,.5,1);
+  z-index: 7;
+}
+/* the two little trailing bubbles that make it a thought and not a shout */
+.think::before, .think::after {
+  content: ''; position: absolute; left: 46%; border-radius: 50%;
+  background: #f6f2e8; box-shadow: 0 2px 0 #bdb6a5;
+}
+.think::before { top: 92%; width: calc(var(--c) * .13); height: calc(var(--c) * .13); }
+.think::after  { top: 116%; width: calc(var(--c) * .07); height: calc(var(--c) * .07); }
+@keyframes thinkin {
+  from { opacity: 0; transform: translateY(6px) scale(.7); }
+}
+
+.want {
+  position: relative; display: grid; place-items: center;
+  width: calc(var(--c) * .46); height: calc(var(--c) * .46);
+  filter: grayscale(1) contrast(.55) brightness(1.25);
+  opacity: .55;
+  transition: filter 320ms, opacity 320ms, scale 320ms;
+}
+/**
+ * Icons sit *inside* their slot rather than filling it. A square cog letterboxes
+ * and looks inset; the battery is 40x62, so at 100% it met the slot on height
+ * and touched the bubble's padding top and bottom — which read as bursting out
+ * of the bubble even though nothing technically overflowed.
+ *
+ * `overflow: hidden` is the belt to that braces: `.bot svg` sets `visible`, and
+ * the bubble lives inside `.bot`, so any future icon that strays outside its own
+ * viewBox would escape the slot entirely.
+ */
+.want svg { width: 82%; height: 82%; overflow: hidden; display: block; }
+/* got it: full colour, and a tick over the corner */
+.want.got { filter: none; opacity: 1; }
+.want.got::after {
+  content: '✓'; position: absolute; right: -12%; bottom: -14%;
+  font-size: calc(var(--c) * .22); font-weight: 800; line-height: 1;
+  color: #2fae67; text-shadow: 0 1px 0 #f6f2e8, 0 0 3px #f6f2e8;
+  animation: tickin 340ms cubic-bezier(.3,1.6,.5,1) backwards;
+}
+@keyframes tickin { from { opacity: 0; transform: scale(0) rotate(-40deg); } }
+/* The rocket is a white hull on a cream bubble, which all but disappeared. It
+   now sits on a dark disc — which also reads correctly: the parts are things he
+   carries, the rocket is a *place* he is headed. */
+.want.goal {
+  width: calc(var(--c) * .54); height: calc(var(--c) * .54);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 34%, #38506b, #1d2a3a 78%);
+  box-shadow: inset 0 0 0 2px #ffffff1f;
+  filter: none; opacity: .5;
+}
+.want.goal svg { width: 62%; height: 62%; }
+.want.goal .flame { display: none; }
+/* once everything is aboard the disc lights up in the colour of power */
+.want.goal.got {
+  background: radial-gradient(circle at 50% 34%, #7a4326, #2a1710 78%);
+  box-shadow: inset 0 0 0 2px var(--power), 0 0 10px #ff7b4566;
+  opacity: 1;
+}
+.want.goal.got::after { color: var(--power); text-shadow: 0 1px 0 #f6f2e8, 0 0 4px #f6f2e8; }
+
+/* the arrow that says: these first, then that */
+.then {
+  width: calc(var(--c) * .22); height: calc(var(--c) * .22);
+  flex: none; margin: 0 calc(var(--c) * .02);
+  background: #8b8371;
+  clip-path: polygon(0 32%, 55% 32%, 55% 8%, 100% 50%, 55% 92%, 55% 68%, 0 68%);
+}
+
+/* stood on the pad without everything it wants */
+.think.short { animation: refuse 520ms 2; background: #ffe9e4; }
+.think.short .want:not(.got) { animation: wantit 620ms 3; }
+@keyframes refuse {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); } 45% { transform: translateX(6px); }
+  70% { transform: translateX(-3px); }
+}
+@keyframes wantit { 50% { filter: none; opacity: 1; scale: 1.28; } }
+.launchpad.short .rocket { animation: refuse 520ms 2; }
+
+/* ---- picking something up ---- */
+.pickring {
+  position: absolute; inset: 12%; border-radius: 50%;
+  border: 4px solid #ffe9c4; animation: pickring 620ms ease-out forwards;
+}
+@keyframes pickring {
+  0% { transform: scale(.3); opacity: 1; border-width: 6px; }
+  100% { transform: scale(2.1); opacity: 0; border-width: 1px; }
+}
+
+/* ---- the scrapyard floor, seen from above ---- */
+.scrapground {
+  position: absolute; inset: -2%;
+  background:
+    repeating-linear-gradient(24deg, #00000018 0 3px, transparent 3px 70px),
+    radial-gradient(circle at 30% 24%, #6d3f24 0 90px, transparent 91px),
+    linear-gradient(150deg, #6b4028 0%, #533120 55%, #3c2418 100%);
+}
+.wreck {
+  position: absolute; border-radius: 7px;
+  box-shadow: inset 0 0 0 3px #00000033, inset 0 -8px 12px #00000038, 0 8px 16px #00000059;
+  opacity: .92;
+}
+.wreck::after {                      /* the roof panel seam and a windscreen */
+  content: ''; position: absolute; inset: 18% 12%;
+  border-radius: 4px; background: #ffffff12;
+  box-shadow: inset 0 0 0 2px #0000002e;
+}
+.tyrepile {
+  position: absolute; border-radius: 50%;
+  background:
+    radial-gradient(circle, #1d1a17 0 26%, transparent 27%),
+    radial-gradient(circle, #2c2724 0 40%, #201c19 41% 62%, #2c2724 63% 82%, #1a1715 83%);
+  box-shadow: 0 7px 14px #00000066;
+}
+.rust {
+  position: absolute; border-radius: 46% 54% 38% 62% / 52% 44% 56% 48%;
+  background: radial-gradient(circle at 42% 40%, #a4552199, #a455210f 70%);
+}
+.pool.warm { background: radial-gradient(circle, #ffcf9459 0%, #ff9c4a1c 42%, transparent 70%); }

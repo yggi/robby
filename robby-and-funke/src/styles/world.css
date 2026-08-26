@@ -1,0 +1,848 @@
+/* ══════════════════════════ THE WORLD ══════════════════════════ */
+
+.scene {
+  position: relative; overflow: hidden;
+  display: grid; place-items: center;
+  background: var(--bg);
+  transition: background 700ms;
+}
+.scene::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
+  background: radial-gradient(120% 85% at 50% 45%, transparent 40%, #00000070 100%);
+}
+/* the Lab's backdrop is furniture, so the vignette has to stop eating it */
+.scene[data-theme="lab"]::after {
+  background: radial-gradient(130% 95% at 50% 45%, transparent 54%, #00000047 100%);
+}
+.decor {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  /* parallax: the backdrop moves less than the board when the camera pushes in */
+  transform: scale(calc(1 + (var(--z) - 1) * .32));
+  transition: transform 900ms cubic-bezier(.4,0,.2,1), opacity 320ms;
+}
+
+.board {
+  position: relative; z-index: 2;
+  /* Whole pixels, deliberately. A fractional tile size puts every tile boundary
+     and every sprite on a fractional pixel, and the floors layer — which sits
+     under a filter and so rasterises on its own — snaps to the grid while the
+     robot and the items above it do not. The result is a drift of up to a pixel
+     that changes as he moves. The unrounded value stays as a fallback for
+     engines without round(). */
+  --c: min(66px, calc((100vw - 56px) / var(--w)), calc((100dvh - 366px) / var(--h)));
+  --c: round(down, min(66px, calc((100vw - 56px) / var(--w)),
+                       calc((100dvh - 366px) / var(--h))), 1px);
+  width: calc(var(--w) * var(--c));
+  height: calc(var(--h) * var(--c));
+  transform:
+    scale(var(--z, 1))
+    translate(calc((var(--w) * .5 - var(--fx) - .5) * var(--c)),
+              calc((var(--h) * .5 - var(--fy) - .5) * var(--c)));
+  transition: transform 900ms cubic-bezier(.4,0,.2,1);
+}
+/* the frame in which the level is swapped — no transition, nothing to see */
+.board.snap, .snap .decor { transition: none; }
+
+.board.shake { animation: boardShake 400ms; }
+@keyframes boardShake {
+  0%,100% { translate: 0 0; }
+  25% { translate: calc(var(--bx) * -5px) calc(var(--by) * -5px); }
+  60% { translate: calc(var(--bx) * 3px) calc(var(--by) * 3px); }
+}
+
+.layer { position: absolute; inset: 0; }
+/* Robby's things, sitting in the wall cells. Behind the floor, so the path
+   always wins where they overlap. */
+.clutter { z-index: 0; filter: drop-shadow(0 6px 8px #00000055); }
+.propcell { display: grid; place-items: end center; }
+.prop { width: 94%; height: 94%; overflow: visible; }
+.p-wood { fill: #a9713f; } .p-wood2 { fill: #7d5129; color: #7d5129; }
+.p-metal { fill: #9aa6b4; } .p-metal2 { fill: #6b7787; color: #6b7787; }
+.p-accent { fill: #d9503f; } .p-teal { fill: #2b8e8a; }
+.p-dark { fill: #333b48; } .p-glass { fill: #8fc9e8; }
+.p-shell { fill: #d8e2e4; } .p-off { fill: #7a8a90; }
+.p-bolt { fill: #ffd12e; } .p-cable { color: #3b4450; stroke: #3b4450; }
+.p-screen { fill: #6fe0c0; }
+.p-leaf { fill: #3f9a56; } .p-leaf2 { fill: #55b96c; }
+
+/* One shadow for the whole ribbon, not one per tile. This is what makes the
+   walkable region read as a single continuous surface rather than a grid. */
+.floors { filter: drop-shadow(0 5px 0 var(--edge)) drop-shadow(0 12px 16px #00000055); }
+
+/* Anything that lives at a board coordinate is exactly one tile and is placed
+   by --x/--y. Adding a new board element means adding it here — miss it, and it
+   becomes an unpositioned block sized against the whole board. */
+.tile, .over, .item, .bot, .launchpad, .propcell, .fx {
+  position: absolute;
+  width: var(--c); height: var(--c);
+  translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c));
+}
+.tile::before {
+  content: ''; position: absolute;
+  inset: var(--in); border-radius: var(--rad);
+  background: var(--pattern, none), var(--floor);
+  background-size: var(--patsize, auto);
+}
+.tile.willfall::before { opacity: .32; }
+.tile.gone::before { animation: crumble 480ms forwards; }
+@keyframes crumble {
+  30% { transform: translateY(5px) rotate(2deg); }
+  100% { transform: translateY(28px) rotate(-10deg) scale(.62); opacity: 0; }
+}
+
+.over { display: grid; place-items: center; }
+
+/* ---- gate: retractable bollards. Raised means stop; sunk means go. ---- */
+.bollards {
+  position: absolute; inset: var(--in);
+  display: flex; align-items: center; justify-content: center; gap: 9%;
+}
+.over.h .bollards { flex-direction: column; }
+.bollard { position: relative; width: 21%; aspect-ratio: 1; }
+.bollard::before {                       /* the socket it sinks into */
+  content: ''; position: absolute; inset: -6%; border-radius: 50%;
+  background: #00000024;
+}
+.post {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: var(--gate);
+  box-shadow: 0 5px 0 #00000038, inset 0 -4px 0 #0000002e, inset 0 0 0 3px #ffffff4d;
+  transition: transform 460ms cubic-bezier(.5,-.3,.3,1), opacity 300ms 160ms;
+}
+.over.open .post { transform: translateY(14%) scale(.26); opacity: 0; }
+
+.plate-ring {
+  position: absolute; width: 44%; height: 44%; border-radius: 50%;
+  border: 5px solid var(--gate); opacity: .85;
+}
+.plate-ring::after {
+  content: ''; position: absolute; inset: -13px; border-radius: 50%;
+  border: 3px solid var(--gate); animation: ping 2.4s ease-out infinite;
+}
+@keyframes ping { 0% { transform: scale(.7); opacity: .55; } 100% { transform: scale(1.2); opacity: 0; } }
+
+/* road markings / floorboards / hull seams — decoration only */
+.mark { position: absolute; opacity: var(--markop, 0); }
+.over.h .mark { width: 100%; height: 6px;
+  background: repeating-linear-gradient(90deg, var(--markcol) 0 32%, transparent 32% 64%); }
+.over.v .mark { height: 100%; width: 6px;
+  background: repeating-linear-gradient(180deg, var(--markcol) 0 32%, transparent 32% 64%); }
+
+/* ---- the rocket: the way out, when the manifest is satisfied ----
+   Named `launchpad`, not `exit`: the floor tile beneath it already carries the
+   class `exit` from its cell kind, and `.exit` matched that first. ---- */
+/* The rocket stands *on* the pad. It used to be centred in the tile with a ring
+   drawn round its middle, so it read as sunk into the floor with a halo. Now
+   the pad is a plate at the bottom of the tile and the rocket rests its fins on
+   it. */
+/* Not a grid. `height: 82%` on the rocket was resolving against an auto-sized
+   grid row — an indefinite height — so where the ship actually landed was
+   anyone's guess. Positioned against the tile box instead, which has a definite
+   height, so the percentages mean what they say. */
+.launchpad { z-index: 3; pointer-events: none; }
+/*
+ * A quarter of the sprite below the fins is flame, invisible until it fires, so
+ * the visible base of the ship is 25% up from the bottom of its own box. The
+ * box therefore hangs below the tile by that much, less a little, which puts
+ * the fins on the plate.
+ */
+.launchpad .rocket {
+  position: absolute; left: 50%; bottom: -6%; translate: -50% 0;
+  height: 82%; width: auto; overflow: visible;
+}
+.launchpad .pad {
+  position: absolute; left: 50%; bottom: 7%; translate: -50% 0;
+  width: 72%; height: 15%; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, #ffffff26, #ffffff0f 70%);
+  box-shadow: inset 0 0 0 3px #ffffff2e, 0 3px 8px #00000047;
+}
+.launchpad.armed .pad {
+  box-shadow: inset 0 0 0 3px var(--power), 0 0 18px #ff7b4547, 0 3px 8px #00000047;
+}
+/* the ring of light that says it is ready, thrown out across the plate */
+.launchpad.armed .pad::after {
+  content: ''; position: absolute; inset: -14% -6%;
+  border-radius: 50%; border: 3px solid var(--power);
+  animation: ping 1.7s ease-out infinite;
+}
+/* Sized by height, not width: the art is 60x112, so setting width made it
+   115% of a tile tall. The rocket occupies exactly one tile. */
+.rocket { width: auto; overflow: visible; }
+.hull { fill: #eef6f7; }
+.fin  { fill: #d1503a; }
+.band { fill: #2b8e8a; }
+/* the porthole is the manifest check, made visible: dark until the robot is
+   carrying everything the rocket needs, then lit in the colour of power */
+.port { fill: #56656d; transition: fill 500ms; }
+.launchpad.armed .port { fill: var(--power); filter: drop-shadow(0 0 7px var(--power)); }
+.flame { opacity: 0; transform-origin: 30px 84px; }
+/* Robby's orange eyes and Funke's violet ones, seen through the porthole.
+   Nobody is ever lost — once they board, you can see them inside. */
+/* ---- aboard, and waiting ----
+   The crew climbs in at the end of the celebration, and then the rocket simply
+   sits there loaded: lights on, breathing, venting a little. It does not move
+   until the player asks for the next room. */
+.crew { opacity: 0; }
+.launchpad.loaded .crew { animation: crewin 320ms 1900ms forwards; }
+@keyframes crewin { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; } }
+.launchpad.loaded .port { animation: portlight 400ms 1860ms forwards; }
+@keyframes portlight { to { fill: #14403f; } }
+
+/* ready for launch: a slow breath, a warm glow at the base, and the odd wisp */
+.launchpad.loaded .rocket { animation: standby 2.6s 2200ms ease-in-out infinite; }
+@keyframes standby {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-1.5%) scaleY(1.012); }
+}
+.launchpad.loaded .pad { animation: warmup 2.6s 2200ms ease-in-out infinite; }
+@keyframes warmup {
+  0%, 100% { box-shadow: 0 0 0 0 #ff7b4500; }
+  50% { box-shadow: 0 0 22px 6px #ff7b4536; }
+}
+.launchpad.loaded .flame { animation: pilot 1.7s 2200ms ease-in-out infinite; }
+@keyframes pilot {
+  0%, 100% { opacity: .25; transform: scaleY(.16); }
+  50% { opacity: .5; transform: scaleY(.3); }
+}
+
+/* ---- and then it goes ----
+   Three seconds, in four beats: the burn catches and it settles on its legs,
+   it strains, it unsticks, and then it is gone. A departure that took under a
+   second read as the rocket being deleted rather than leaving. */
+.launchpad.launch .rocket {
+  animation: liftoff 2600ms 420ms cubic-bezier(.6,0,.85,.35) forwards;
+}
+@keyframes liftoff {
+  0%   { transform: translateY(0) scaleY(1); }
+  10%  { transform: translateY(1.5%) scaleY(.97); }   /* sits down on the burn */
+  26%  { transform: translateY(0) scaleY(1.02); }     /* strains */
+  38%  { transform: translateY(-6%) scaleY(1.03); }   /* unsticks */
+  62%  { transform: translateY(-70%) scaleY(1.05); }
+  100% { transform: translateY(-620%) scaleX(.72) scaleY(1.12); }
+}
+/* it does not go up perfectly straight, and not the same way twice */
+.launchpad.lift2 .rocket { animation-name: liftoff2; }
+@keyframes liftoff2 {
+  0%   { transform: translateY(0) rotate(0deg); }
+  10%  { transform: translateY(1.5%) rotate(-1deg); }
+  38%  { transform: translateY(-6%) rotate(1.5deg); }
+  62%  { transform: translateY(-70%) rotate(-2deg); }
+  100% { transform: translateY(-620%) rotate(3deg) scaleX(.72); }
+}
+.launchpad.lift3 .rocket { animation-name: liftoff3; }
+@keyframes liftoff3 {
+  0%   { transform: translateY(0) rotate(0deg); }
+  14%  { transform: translateY(2%) scaleY(.95); }
+  30%  { transform: translateY(-2%) rotate(2deg); }
+  46%  { transform: translateY(-14%) rotate(-2deg); }
+  70%  { transform: translateY(-90%) rotate(1deg); }
+  100% { transform: translateY(-640%) rotate(-4deg) scaleX(.7); }
+}
+
+.launchpad.launch .flame { animation: burn 2600ms 380ms ease-out forwards; }
+@keyframes burn {
+  0%   { opacity: .4; transform: scaleY(.3); }
+  8%   { opacity: 1; transform: scaleY(2.2); }        /* it catches */
+  14%  { opacity: 1; transform: scaleY(1.5); }
+  30%  { opacity: 1; transform: scaleY(3.4); }
+  100% { opacity: .9; transform: scaleY(4.6); }
+}
+.launchpad.launch .pad { animation: scorch 1100ms 700ms forwards; }
+.launchpad.launch .crew, .launchpad.launch .port { animation: none; opacity: 1; }
+.launchpad.launch .port { fill: #14403f; }
+
+/* the pad shakes itself apart under the burn before anything moves */
+.board.liftoff { animation: rumble 900ms 300ms ease-out; }
+@keyframes rumble {
+  0%, 100% { translate: 0 0; }
+  10% { translate: -2px 1px; } 22% { translate: 2px -1px; }
+  36% { translate: -3px 0; }   50% { translate: 3px 1px; }
+  66% { translate: -2px -1px; } 82% { translate: 1px 1px; }
+}
+
+/* Exhaust: a rolling cloud out from under it. Named `plume`, not `smoke` —
+   the Lab's menu badge already has a `.smoke` for its chimney. */
+.plume {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 40% 36%, #ffffffe0, #cfd6de00 70%);
+  animation: billow var(--t) ease-out forwards;
+}
+@keyframes billow {
+  0% { transform: translate(0, 0) scale(.2); opacity: .9; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; }
+}
+
+/* Robby and Funke climb aboard at the end of the cheering, not at the off. */
+.bot.boarding { animation: board 560ms 1420ms forwards; }
+.cat.boarding { animation: board 560ms 1580ms forwards; }
+@keyframes board {
+  0%   { transform: scale(1) translateY(0); opacity: 1; }
+  45%  { transform: scale(1.06) translateY(6%); opacity: 1; }
+  100% { transform: scale(.16) translateY(-26%); opacity: 0; }
+}
+
+/* ---- Funke, the robot-cat. Pure companion: the engine has never heard
+        of her, and she cannot change a single outcome. ---- */
+.cat {
+  position: absolute; z-index: 3; display: grid; place-items: center;
+  width: var(--c); height: var(--c);
+  /* a little down and to the side, so she reads as trailing him rather than
+     standing in the same spot when they share a tile */
+  translate: calc((var(--x) + .17) * var(--c)) calc((var(--y) + .21) * var(--c));
+  transition: translate var(--catstep, 380ms) cubic-bezier(.3,.8,.4,1) 90ms;
+}
+/* On a win she stays her own size and stays behind him. They bounce in
+   counter-phase — when he is up she is down — so it reads as the two of them
+   celebrating together rather than as a cat upstaging a robot. */
+.cat-svg { width: 56%; overflow: visible; }
+.cat .shell { fill: #eef6f7; }
+.cat .ear { fill: #2b8e8a; }
+.cat .tailtip { fill: #c39bff; }
+.ceye { fill: #8fa0a6; transition: fill 500ms; }
+.cat.on .ceye { fill: #c39bff; filter: drop-shadow(0 0 5px #c39bff); }
+.ceyes { transform-origin: 58px 38px; animation: blink 4.4s infinite; }
+
+/* Funke's tics: an ear that twitches, and a head that looks around when she
+   thinks nobody is watching. */
+.eartwitch { transform-origin: 52px 31px; animation: eartwitch 7.3s ease-in-out infinite; }
+@keyframes eartwitch {
+  0%, 72%, 100% { transform: rotate(0deg); }
+  76% { transform: rotate(-17deg); }
+  80% { transform: rotate(6deg); }
+  84% { transform: rotate(0deg); }
+}
+.cathead { transform-origin: 57px 50px; animation: catlook 13s ease-in-out infinite; }
+@keyframes catlook {
+  0%, 40% { transform: rotate(0deg); }
+  46%, 55% { transform: rotate(-9deg) translateY(-1px); }
+  62%, 74% { transform: rotate(7deg); }
+  80%, 100% { transform: rotate(0deg); }
+}
+
+.tail { transform-origin: 20px 60px; animation: tailflick 2.6s ease-in-out infinite;
+        animation-delay: calc(var(--tic, 0s) * -1); }
+@keyframes tailflick { 0%,100% { rotate: -7deg; } 50% { rotate: 12deg; } }
+.catbody { transform-origin: 40px 72px; animation: catbreathe 3.1s ease-in-out infinite;
+           animation-delay: calc(var(--tic, 0s) * -1); }
+@keyframes catbreathe { 50% { transform: scale(1.04, .97); } }
+
+.cat.moving .catbody { animation: trot 300ms ease-in-out infinite; }
+@keyframes trot { 50% { transform: translateY(-7%) scaleY(1.04); } }
+.cat.startled .catbody { animation: startled 620ms; }
+.cat.startled .tail { animation: bristle 620ms; }
+@keyframes startled {
+  0% { transform: translate(0,0); }
+  25% { transform: translate(-14%, -22%) scaleY(1.14); }
+  60% { transform: translate(6%, 0) scaleY(.94); }
+}
+@keyframes bristle { 0%,100% { rotate: 0deg; } 30% { rotate: -46deg; } }
+/* Her half of the duet. v1 starts half a beat after his, so when he is up she
+   is down — the two of them bouncing together rather than in unison. */
+.cat.cheer.v1 .catbody { animation: catpounce 780ms 2 390ms cubic-bezier(.34,1.4,.5,1); }
+@keyframes catpounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  42% { transform: translateY(-30%) rotate(-11deg); }
+  70% { transform: translateY(0) scale(1.08, .93); }
+}
+.cat.cheer.v2 .catbody { animation: catchase 900ms 2 cubic-bezier(.4,.2,.3,1); }
+@keyframes catchase {          /* chasing her own tail */
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.cat.cheer.v3 .catbody { animation: catzoom 310ms infinite ease-in-out; }
+@keyframes catzoom {           /* zoomies: a low fast scamper */
+  0%, 100% { transform: translateY(0) scaleX(1); }
+  50% { transform: translateY(-16%) scale(1.06, .92); }
+}
+.cat.cheer.v4 .catbody { animation: catsit 1400ms 1 cubic-bezier(.3,1.4,.5,1); }
+@keyframes catsit {            /* sits up proud, then one big hop */
+  0% { transform: translateY(0) scaleY(1); }
+  30% { transform: translateY(-6%) scaleY(1.14); }
+  62% { transform: translateY(-6%) scaleY(1.14); }
+  80% { transform: translateY(-40%) scaleY(1); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+.cat.cheer .tail { animation: tailwag 240ms ease-in-out infinite; }
+.cat.cheer.v2 .tail { animation: tailwag 150ms linear infinite; }
+@keyframes tailwag { 0%, 100% { rotate: -22deg; } 50% { rotate: 26deg; } }
+.cat.puzzled .catbody { animation: cattilt 800ms; }
+@keyframes cattilt { 40% { transform: rotate(13deg); } 75% { transform: rotate(-6deg); } }
+
+/* ---- the plan, drawn as coloured vectors ----
+   A run of tiles bought by one instruction becomes one continuous stroke in
+   that direction's colour. Dots made every tile look equally expensive. */
+.plans { z-index: 2; pointer-events: none; }
+.vec { position: absolute; width: var(--c); height: var(--c);
+       translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c)); }
+.seg {
+  position: absolute; left: 50%; top: 50%;
+  width: 100%; height: 17%;
+  transform-origin: 0 50%;
+  transform: translateY(-50%) rotate(var(--a));
+}
+.seg i {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: var(--dc); opacity: .45;
+  transform-origin: 0 50%;
+  animation: draw 220ms var(--d) backwards cubic-bezier(.3,1.1,.5,1);
+}
+@keyframes draw { from { transform: scaleX(0); } }
+/* The stretch the conveyor covers is drawn hollow: the plan carries on through
+   it, but none of it was bought with an instruction. */
+.seg.carried i {
+  background: none;
+  box-shadow: inset 0 0 0 3px var(--dc);
+  opacity: .5;
+}
+/* The last vector stops short of the target tile's centre rather than landing
+   on it, so the arrow points *at* the battery instead of covering it. */
+.seg.head { width: 56%; }
+.seg.head::after {                          /* arrowhead on the final segment */
+  content: ''; position: absolute; right: calc(var(--c) * -.19); top: 50%;
+  width: 0; height: 0; translate: 0 -50%;
+  border-left: calc(var(--c) * .21) solid var(--dc);
+  border-top: calc(var(--c) * .15) solid transparent;
+  border-bottom: calc(var(--c) * .15) solid transparent;
+  opacity: .6; animation: pop 220ms var(--d) backwards;
+}
+@keyframes pop { from { scale: 0; opacity: 0; } }
+@keyframes spin { to { rotate: 360deg; } }
+
+/* ---- the battery: same object everywhere, always haloed so it reads
+        against wood, asphalt, steel or hull alike ---- */
+.item { display: grid; place-items: center; pointer-events: none; z-index: 3; }
+.cellwrap { display: grid; place-items: center; width: 100%; height: 100%;
+            animation: bob 1.9s ease-in-out infinite; }
+.cellwrap::before {
+  content: ''; position: absolute; width: 104%; height: 104%; border-radius: 50%;
+  background: radial-gradient(circle, #ffd9a888 0%, #ff7b4500 62%);
+  animation: halo 1.9s ease-in-out infinite;
+}
+.item.taken .cellwrap { animation: fly 420ms forwards; }
+@keyframes bob { 50% { transform: translateY(-13%); } }
+@keyframes halo { 50% { transform: scale(1.22); opacity: .68; } }
+@keyframes fly {
+  0% { transform: scale(1) translateY(0) rotate(0); }
+  38% { transform: scale(1.34) translateY(-34%) rotate(-12deg); }
+  100% { transform: scale(.12) translateY(-8%) rotate(18deg); opacity: 0; }
+}
+.batt { width: 44%; }
+.keyi { width: 42%; }
+
+/* ---- the robot: never re-themed. He is the constant. ---- */
+.bot { z-index: 4; display: grid; place-items: center; pointer-events: none;
+       transition: translate var(--step, 380ms) cubic-bezier(.32,.86,.4,1); }
+.bot svg { width: 96%; height: 96%; overflow: visible; }
+
+.lean { transform-origin: 50px 88px; transition: transform 200ms; }
+.bot.flat .lean, .bot.up .lean, .bot.down .lean { transform: rotate(0deg); }
+.bot.right .lean { transform: rotate(6deg); }
+.bot.left  .lean { transform: rotate(-6deg); }
+.bot.sad   .lean { transform: rotate(-5deg) translateY(4px); }
+
+.breathe { transform-origin: 50px 90px; animation: breathe 2.8s ease-in-out infinite; animation-delay: calc(var(--tic, 0s) * -1); }
+@keyframes breathe { 50% { transform: scale(1.03, .975); } }
+
+.shell { fill: #eef6f7; } .plate2 { fill: #2b8e8a; }
+.tread { fill: #1c4b49; } .visor { fill: #14403f; }
+.eye   { fill: #9bb0b2; transition: fill 600ms; }
+.bot.on .eye { fill: var(--power); filter: drop-shadow(0 0 6px var(--power)); }
+.eyes { transform-origin: 50px 48px; animation: blink 5.2s infinite; animation-delay: calc(var(--tic, 0s) * -1); }
+.bot.sad .eyes { animation: blinkSlow 3.6s infinite; }
+@keyframes blink { 0%,96%,100% { transform: scaleY(1); } 98% { transform: scaleY(.1); } }
+@keyframes blinkSlow { 0%,86%,100% { transform: scaleY(.5); } 93% { transform: scaleY(.06); } }
+/* Idle life. Long cycles with prime-ish periods so nothing ever syncs up and
+   the two of them never look like a pair of metronomes. */
+.gaze { animation: glance 11s ease-in-out infinite; }
+@keyframes glance {
+  0%, 26% { transform: translateX(0); }
+  32%, 40% { transform: translateX(-3.5px); }
+  48%, 60% { transform: translateX(3.5px); }
+  66%, 100% { transform: translateX(0); }
+}
+.fidget { transform-origin: 50px 92px; animation: fidget 17s ease-in-out infinite; }
+@keyframes fidget {
+  0%, 84% { transform: translateY(0) rotate(0deg); }
+  88% { transform: translateY(-2px) rotate(-1.6deg); }
+  92% { transform: translateY(0) rotate(1.4deg); }
+  96%, 100% { transform: translateY(0) rotate(0deg); }
+}
+.bot.sad .bulb { animation: lowpower 4.3s ease-in-out infinite; }
+@keyframes lowpower { 0%, 88%, 100% { opacity: .5; } 92% { opacity: .95; } 95% { opacity: .35; } }
+
+.ant { transform-origin: 50px 30px; animation: sway 3.6s ease-in-out infinite; animation-delay: calc(var(--tic, 0s) * -1); }
+.bot.sad .ant { transform: rotate(-24deg); animation: none; }
+@keyframes sway { 33% { transform: rotate(8deg); } 66% { transform: rotate(-8deg); } }
+.bulb { fill: #40706e; transition: fill 600ms; }
+.bot.on .bulb { fill: var(--power); filter: drop-shadow(0 0 8px var(--power)); }
+.gaugefill { fill: var(--power); transform-origin: 37px 70px; transform: scaleX(0); }
+.bot.on .gaugefill { animation: charge 640ms .05s forwards cubic-bezier(.3,1.25,.5,1); }
+@keyframes charge { to { transform: scaleX(1); } }
+/* The belt scrolls; the robot does not hop. A tracked machine moves by its
+   track, and animating the tread's *pattern* rather than displacing the whole
+   plate means there is no vertical jitter to notice in the first place. Tied to
+   --step so it never beats against his walking speed. */
+.treadbelt { stroke: #2f6b68; }
+.bot.moving .treadbelt {
+  animation: treadscroll calc(var(--step, 380ms) / 3) linear infinite;
+}
+.bot.left .treadbelt { animation-direction: reverse; }
+/* the walk of shame: eases out slower than it eases in, so it reads as
+   deliberate rather than as a snap-back glitch */
+.bot.homing { transition-timing-function: cubic-bezier(.65,0,.35,1); }
+.bot.homing .lean { transform: rotate(0deg) scale(.94); }
+@keyframes treadscroll { to { stroke-dashoffset: -12; } }
+
+.bot.bonk .lean { animation: lunge 640ms cubic-bezier(.3,.8,.4,1); }
+@keyframes lunge {
+  0%   { transform: translate(0,0); }
+  22%  { transform: translate(calc(var(--bx) * 26%), calc(var(--by) * 26%)) scale(1.12,.88); }
+  46%  { transform: translate(calc(var(--bx) * -14%), calc(var(--by) * -14%)) scale(.92,1.08); }
+  75%  { transform: translate(calc(var(--bx) * 4%), calc(var(--by) * 4%)); }
+  100% { transform: translate(0,0); }
+}
+.bot.shrugging .lean { animation: puzzled 900ms; }
+@keyframes puzzled { 30% { transform: rotate(-13deg); } 62% { transform: rotate(9deg); } }
+/* Four flourishes each, drawn at random on every win. Winning the same room
+   twice should not play back the same clip. */
+.bot.cheer.v1 .lean { animation: cheerSpin 780ms 2 cubic-bezier(.34,1.4,.5,1); }
+@keyframes cheerSpin {
+  0%,100% { transform: translateY(0) rotate(0); }
+  45% { transform: translateY(-22%) rotate(360deg); }
+  72% { transform: translateY(0) scale(1.1,.9); }
+}
+.bot.cheer.v2 .lean { animation: cheerWiggle 620ms 3 ease-in-out; }
+@keyframes cheerWiggle {
+  0%,100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-13%) rotate(-13deg); }
+  50% { transform: translateY(-4%) scale(1.06,.94); }
+  75% { transform: translateY(-13%) rotate(13deg); }
+}
+.bot.cheer.v3 .lean { animation: cheerLeap 1000ms 2 cubic-bezier(.3,1.5,.45,1); }
+@keyframes cheerLeap {
+  0%,100% { transform: translateY(0) scale(1); }
+  16% { transform: translateY(6%) scale(1.14,.84); }   /* crouch */
+  52% { transform: translateY(-42%) scale(.9,1.14); }  /* soar */
+  78% { transform: translateY(0) scale(1.18,.8); }     /* land */
+}
+.bot.cheer.v4 .lean { animation: cheerPirouette 1500ms 1 cubic-bezier(.3,.9,.3,1); }
+@keyframes cheerPirouette {
+  0% { transform: rotate(0) translateY(0); }
+  8% { transform: rotate(-24deg) translateY(4%); }
+  62% { transform: rotate(720deg) translateY(-10%); }
+  78% { transform: rotate(720deg) translateY(0) scale(1.1,.9); }
+  88% { transform: rotate(714deg) translateY(-6%); }
+  100% { transform: rotate(720deg) translateY(0); }
+}
+.qmark { position: absolute; top: -4%; right: 0; font-size: calc(var(--c) * .52);
+         font-weight: 800; color: var(--gold); text-shadow: 0 2px 0 #00000070;
+         animation: pop 260ms backwards; }
+
+/* ---- leaving the room ----
+   Funke bolts, Robby chases. This is the only thing that joins one room of the
+   Lab to the next, so it plays out in full before the camera cuts. */
+.cat.dashing { animation: dashOff 640ms cubic-bezier(.5,0,.85,.35) forwards; }
+.bot.chasing { animation: dashOff 640ms 190ms cubic-bezier(.5,0,.85,.35) forwards; }
+@keyframes dashOff {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  16%  { transform: translate(calc(var(--lx) * -16%), calc(var(--ly) * -16%)) scale(1.06, .94); }
+  100% { transform: translate(calc(var(--lx) * 460%), calc(var(--ly) * 460%)) scale(.72); opacity: 0; }
+}
+.cat.dashing .catbody, .bot.chasing .lean { animation: none; }
+.cat.dashing .tail { animation: tailwag 120ms linear infinite; }
+
+/* ---- particles ---- */
+.fx { pointer-events: none; z-index: 5; display: grid; place-items: center; }
+.dust { position: absolute; width: 13%; height: 13%; border-radius: 50%;
+        background: var(--edge); opacity: 0; animation: dust 560ms forwards; }
+@keyframes dust {
+  0% { opacity: .95; transform: translate(0,0) scale(.4); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.5); }
+}
+.flash {
+  background: radial-gradient(circle at 50% 45%, #fff4d6cc 0%, #ffb04d33 38%, transparent 68%);
+  animation: flash 800ms ease-out forwards;
+}
+@keyframes flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+
+.shock {
+  position: absolute; width: 90%; height: 90%; border-radius: 50%;
+  border: 5px solid #ffd9a8; animation: shock 900ms ease-out forwards;
+}
+@keyframes shock {
+  0% { transform: scale(.35); opacity: .95; border-width: 8px; }
+  100% { transform: scale(3.6); opacity: 0; border-width: 1px; }
+}
+
+.rays {
+  background: repeating-conic-gradient(from 0deg,
+    #ffe6b0aa 0deg 7deg, transparent 7deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 26%, #000 34%, #000 62%, transparent 76%);
+  mask: radial-gradient(circle, transparent 26%, #000 34%, #000 62%, transparent 76%);
+  scale: 5;
+  animation: rayspin 8s linear infinite, rayfade 2.4s ease-out forwards;
+}
+@keyframes rayspin { to { rotate: 360deg; } }
+@keyframes rayfade { 0% { opacity: 0; } 14% { opacity: .85; } 70% { opacity: .6; } 100% { opacity: 0; } }
+
+/* There is deliberately no solid-particle burst anchored to the robot's tile.
+   One lived here and put a coloured dot on Robby's face: `.fx` sits at z-index
+   5, above the bot's 4, and the burst radius was only 46px on a 66px tile, so
+   even starting the particles part-way out left them inside his silhouette.
+   Anything anchored to his tile must be a ring or a masked shape — see .shock
+   and .rays, both of which are hollow in the middle. */
+
+.confetti { position: absolute; width: 8px; height: 13px; border-radius: 2px;
+            animation: fall var(--t) ease-in forwards; }
+.confetti.star {
+  width: 13px; height: 13px; border-radius: 0;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+@keyframes fall {
+  0% { opacity: 1; transform: translate(0,0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx), 44vh) rotate(var(--rot)); }
+}
+
+/* ---- the Lab floor, seen from above ----
+   No walls, no skirting, no lamps on cords. The board looks straight down, so
+   the backdrop does too: floorboards, a rug, taped-down cable, spilt oil, and
+   pools of light from fittings that are never in shot. */
+.labfloor {
+  position: absolute; inset: -2%;
+  background:
+    repeating-linear-gradient(92deg, #00000026 0 2px, transparent 2px 96px),
+    repeating-linear-gradient(2deg, #0000001a 0 1px, transparent 1px 38px),
+    linear-gradient(158deg, #7a5636 0%, #63432a 52%, #4e3421 100%);
+}
+.hazard {
+  position: absolute; left: -4%; right: -4%; height: 16px; opacity: .5;
+  background: repeating-linear-gradient(115deg, #d9a521 0 14px, #2c2519 14px 28px);
+}
+.rug {
+  position: absolute; border-radius: 8px; opacity: .82;
+  background:
+    repeating-linear-gradient(45deg, #ffffff0e 0 9px, transparent 9px 18px),
+    linear-gradient(160deg, #3f6f6b, #2b4f4e);
+  box-shadow: inset 0 0 0 7px #24413f, inset 0 0 0 10px #4d8481, 0 6px 16px #00000047;
+}
+.rug.small {
+  background:
+    repeating-linear-gradient(45deg, #ffffff0e 0 9px, transparent 9px 18px),
+    linear-gradient(160deg, #7b4a3c, #5b342a);
+  box-shadow: inset 0 0 0 6px #47281f, inset 0 0 0 9px #94604d, 0 6px 16px #00000047;
+}
+.cablerun {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  fill: none; stroke: #262b33; stroke-width: 1.1; opacity: .8;
+  vector-effect: non-scaling-stroke;
+}
+.tape {
+  position: absolute; width: 26px; height: 13px; border-radius: 2px;
+  background: #cfc3a4; opacity: .55; box-shadow: 0 1px 2px #00000047;
+}
+.drain {
+  position: absolute; width: 54px; height: 54px; border-radius: 50%;
+  background:
+    repeating-linear-gradient(0deg, #1d2129 0 4px, transparent 4px 9px),
+    radial-gradient(circle, #3b424e, #23272f);
+  box-shadow: inset 0 0 0 4px #545c69, 0 3px 8px #00000059;
+}
+.oil {
+  position: absolute; border-radius: 48% 52% 40% 60% / 55% 42% 58% 45%;
+  background: radial-gradient(circle at 40% 40%, #1d1a16b3, #1d1a1600 72%);
+}
+.bolt {
+  position: absolute; border-radius: 50%;
+  background: #b7ac96; opacity: .38; box-shadow: 0 1px 1px #00000059;
+}
+.pool {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #ffdca85c 0%, #ffb75c1f 40%, transparent 68%);
+  animation: poolbreathe var(--t) ease-in-out infinite;
+}
+@keyframes poolbreathe { 50% { transform: scale(1.07); opacity: .82; } }
+
+/* ---- ambient decor: pure eye candy, zero gameplay meaning ---- */
+.lamp {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #ffdca866 0%, #ffb75c1a 44%, transparent 70%);
+  animation: lampsway var(--t) ease-in-out infinite;
+}
+@keyframes lampsway { 50% { transform: translateX(var(--dx)) scale(1.06); opacity: .82; } }
+
+.mote { position: absolute; border-radius: 50%; background: #fff;
+        animation: drift var(--t) linear infinite; }
+@keyframes drift {
+  0% { transform: translate(0,0); opacity: 0; }
+  14%,78% { opacity: var(--o); }
+  100% { transform: translate(var(--dx), -80px); opacity: 0; }
+}
+.star { position: absolute; border-radius: 50%; background: #fff;
+        animation: twinkle var(--t) ease-in-out infinite; }
+@keyframes twinkle { 0%,100% { opacity: .18; transform: scale(.7); } 50% { opacity: 1; transform: scale(1); } }
+.roof { position: absolute; background: #171c28; border-radius: 4px;
+        box-shadow: inset 0 0 0 2px #ffffff08, 0 6px 14px #00000059; }
+.ac   { position: absolute; background: #2b3244; border-radius: 2px; }
+.tank { position: absolute; border-radius: 50%; background: #232a3a;
+        box-shadow: inset 0 0 0 3px #313a4e; }
+.sky  { position: absolute; border-radius: 2px; animation: flick var(--t) steps(1) infinite; }
+@keyframes flick { 0%,74% { opacity: .9; } 76%,100% { opacity: .22; } }
+.gear { position: absolute; animation: spin var(--t) linear infinite; }
+.gear.rev { animation-direction: reverse; }
+
+/* ---- bits: the reward currency, a coin that can't decide if it's 0 or 1 ---- */
+.bit {
+  position: fixed; top: 0; left: 0; z-index: 40; pointer-events: none;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+}
+.bit .face {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: linear-gradient(160deg, #ffe07a, #f0a92c 62%, #c9801a);
+  box-shadow: inset 0 0 0 3px #fff2c060, 0 3px 10px #00000055;
+}
+.bit b {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  animation: digit 1900ms ease-in-out infinite; transform-origin: center;
+  font-size: 17px; font-weight: 800; color: #6a3f06;
+}
+/* Only the digit turns over. The coin itself never distorts — squashing the
+   whole circle read as a glitch rather than as a coin that can't decide. */
+.bit b:nth-child(2) { animation-delay: -950ms; }
+@keyframes digit {
+  0%, 40%  { opacity: 1; transform: scaleY(1); }
+  48%, 92% { opacity: 0; transform: scaleY(.12); }
+  100%     { opacity: 1; transform: scaleY(1); }
+}
+.bit.static { position: relative; margin: 0; width: 24px; height: 24px; }
+.bit.static b { font-size: 12px; }
+
+.purse {
+  position: absolute; right: 2px; display: flex; align-items: center; gap: 6px;
+  color: var(--chalk); font-weight: 700; font-size: 15px;
+}
+.purse em { font-style: normal; min-width: 16px; animation: bump 420ms cubic-bezier(.3,1.5,.5,1); }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.55); color: var(--gold); } }
+
+/* ---- the status bar ----
+   Same matte material as the console and mirrored round, so the world sits
+   framed between them. Status belongs up here, away from the controls. */
+.gamebar {
+  position: relative; z-index: 11;
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 9px;
+  background: linear-gradient(0deg, var(--console2) 0%, var(--console) 46%);
+  border-bottom: 2px solid #ffffff14;
+  border-radius: 0 0 22px 22px;
+  box-shadow: 0 12px 26px #00000059;
+}
+.gbmid { flex: 1; min-width: 0; display: grid; justify-items: center; gap: 5px; }
+.gbmid h2 {
+  margin: 0; font-size: 17px; font-weight: 700; color: var(--chalk);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.gamebar .purse { position: static; }
+
+/* ---- the cheese moon's surface ----
+   A moon, first and last. Bare grey rock, craters that read as craters, and
+   Earth hanging low. The cheese is a rumour: a glow deep in the biggest holes,
+   a broken seam or two, and the strings holding the bridges up. An all-yellow
+   ground turned it into a wheel of cheese in a spotlight. */
+.rindground {
+  position: absolute; inset: -2%;
+  background:
+    radial-gradient(circle at 18% 14%, #6b7280 0 22%, transparent 60%),
+    radial-gradient(circle at 82% 78%, #4d525c 0 26%, transparent 62%),
+    linear-gradient(162deg, #4a4f59 0%, #383c45 46%, #23262d 100%);
+}
+/* craters: a lit rim on one side, shadow on the other, dust inside */
+.hole, .bubble {
+  position: absolute; border-radius: 50%;
+  background:
+    radial-gradient(circle at 62% 68%, #2a2e35 0 58%, #1b1e24 100%);
+  box-shadow:
+    inset 4px 5px 9px #00000094,
+    inset -3px -4px 0 #9aa2b040,
+    0 1px 0 #b6bdc82e;
+}
+/* only the deep ones show anything down there */
+.hole::after {
+  content: ''; position: absolute; inset: 40%; border-radius: 50%;
+  background: radial-gradient(circle, #f5d24f38, #f5d24f00 72%);
+}
+.bubble { box-shadow: inset 3px 3px 6px #00000094, inset -2px -2px 0 #9aa2b033; }
+/* a seam of it, split open along a ridge */
+.rind {
+  position: absolute; border-radius: 999px;
+  background: linear-gradient(180deg, #e8cf6a, #a8801a);
+  box-shadow: inset 0 -3px 0 #7a5c10, 0 0 18px #f5d24f33, 0 3px 8px #00000066;
+  opacity: .6;
+}
+.crumb { position: absolute; border-radius: 2px; background: #cdd3dd; opacity: .38; }
+/* Earth, low over the horizon */
+.earthrise {
+  position: absolute; border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, #7fb6ff 0 38%, #3f6fc4 62%, #1f3f7d 100%);
+  box-shadow: 0 0 60px #6fa8ff40, inset -10px -12px 30px #00000073;
+  opacity: .8;
+}
+.pool.cold { background: radial-gradient(circle, #dbeaff59 0%, #9fc4ff1f 42%, transparent 70%); }
+
+/* ---- floors that will not take a second crossing ----
+   The tile paints no floor at all. Drawing the walkway underneath made a bridge
+   read as ordinary ground with lines painted on it; what is wanted is the drop,
+   with something strung across. */
+.tile.fragile::before {
+  background: #00000038;
+  box-shadow: inset 0 3px 7px #00000059;
+}
+.tile.fragile.willfall::before, .tile.fragile.gone::before { background: #00000047; }
+
+.strands {
+  position: absolute; inset: var(--in);
+  pointer-events: none; overflow: visible;
+}
+.over.v .strands { transform: rotate(90deg); }
+.strands svg {
+  width: 100%; height: 100%; display: block;
+  animation: sag var(--sagt, 3.4s) ease-in-out infinite;
+  transform-origin: 50% 30%;
+}
+.strands path {
+  fill: none;
+  stroke: var(--string, #8e9299);
+  stroke-width: var(--stringw, 4);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+@keyframes sag { 50% { transform: scaleY(1.14); } }
+/* about to give way: the span goes taut, thin and pale */
+.over.willfall .strands svg { animation: none; transform: scaleY(.72); opacity: .45; }
+
+/* ---- and when it does give way ----
+   Each strand stretches thin, parts in the middle, and the two halves whip back
+   to the sides they were anchored to. They go one after another rather than all
+   at once: a rope bridge fails a strand at a time, and staggering it is most of
+   what makes it read as tearing rather than fading. */
+.over.gone .strands path {
+  animation: snap 520ms cubic-bezier(.3,0,.2,1) backwards;
+  animation-fill-mode: forwards;
+}
+.over.gone .strands path:nth-child(2) { animation-delay: 70ms; }
+.over.gone .strands path:nth-child(3) { animation-delay: 30ms; }
+.over.gone .strands path:nth-child(4) { animation-delay: 120ms; }
+@keyframes snap {
+  0%   { stroke-dasharray: 50 0 50; stroke-width: var(--stringw, 4); }
+  /* drawn taut and thin just before it parts */
+  38%  { stroke-dasharray: 49 2 49; stroke-width: calc(var(--stringw, 4) * .55); }
+  100% { stroke-dasharray: 9 82 9; stroke-width: var(--stringw, 4); opacity: 0; }
+}
+/* the whole span drops as it lets go */
+.over.gone .strands svg { animation: letgo 520ms cubic-bezier(.4,0,.6,1) forwards; }
+@keyframes letgo {
+  0%   { transform: scaleY(.8); }
+  36%  { transform: scaleY(.62); }        /* pulled tight */
+  100% { transform: scaleY(1.5) translateY(14%); }
+}
+
+

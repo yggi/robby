@@ -1,0 +1,206 @@
+/* ══════════════════════════ THE EDITOR ══════════════════════════
+   Same furniture as the level select — a bar at the top, the world behind —
+   so making a room feels like being in one. */
+
+.editor {
+  position: relative; height: 100dvh; overflow: hidden; color: var(--chalk);
+  display: grid; grid-template-rows: auto 1fr auto auto auto;
+  gap: 10px; padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+.editor .decor { z-index: 0; opacity: .5; }
+.editor .roomsbar, .editor .canvas, .editor .verdict,
+.editor .tools, .editor .themepick { position: relative; z-index: 2; }
+.editor .roomsbar { margin: 0; }
+
+.canvas { display: grid; place-items: center; min-height: 0; }
+/* `egrid`, not `grid`: the level select already owns `.grid` for its tile
+   layout, and two screens can be in the DOM together during a cross-fade. */
+.egrid {
+  position: relative;
+  --gc: min(52px, calc((100vw - 44px) / var(--gw)), calc((100dvh - 340px) / var(--gh)));
+  --gc: round(down, min(52px, calc((100vw - 44px) / var(--gw)),
+                        calc((100dvh - 340px) / var(--gh))), 1px);
+  /* the board's tiles are placed with --c, so the editor simply supplies one */
+  --c: var(--gc);
+  width: calc(var(--gw) * var(--gc));
+  height: calc(var(--gh) * var(--gc));
+  border-radius: 14px;
+  background: #0000004d;
+  box-shadow: inset 0 0 0 2px #ffffff1a, 0 10px 24px #00000059;
+  /* the browser must not pan or zoom while a finger is drawing */
+  touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+
+
+/* the answer, drawn on the room as you build it */
+
+
+
+
+
+.verdict {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 30px; font-size: 15px; color: var(--chalk); opacity: .75;
+}
+.verdict.good { color: var(--go); opacity: 1; }
+.verdict .dots { letter-spacing: 3px; opacity: .6; }
+.verdict .gearspin { width: 20px; height: 20px; border-width: 5px; }
+
+.tools { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.paints { display: flex; gap: 8px; }
+.paint {
+  width: 54px; height: 54px; border: 0; border-radius: 15px; padding: 0;
+  background: var(--console2); box-shadow: 0 4px 0 #0e1117, inset 0 1px 0 #ffffff1a;
+  display: grid; place-items: center; cursor: pointer;
+  transition: translate 90ms, box-shadow 90ms;
+}
+.paint:active { translate: 0 3px; box-shadow: 0 1px 0 #0e1117; }
+.paint.on { box-shadow: 0 4px 0 #0e1117, inset 0 0 0 2px var(--gold); }
+.paint i { width: 24px; height: 24px; border-radius: 5px; display: block; }
+.paint.floor i { background: var(--floor); }
+.paint.wall i { background: #2b2f38; box-shadow: inset 0 0 0 2px #ffffff1f; }
+.paint.robot i { background: #eef6f7; border-radius: 50%;
+                 box-shadow: inset 0 -6px 0 #2b8e8a; }
+.paint.battery i { background: var(--power); border-radius: 4px; }
+
+.play.save { width: 62px; height: 62px; }
+.play.save:disabled { background: #3a4048; box-shadow: 0 5px 0 #23272d; opacity: .5; }
+.play.save svg { width: 50%; }
+
+.themepick { display: flex; justify-content: center; gap: 8px; }
+.tchip {
+  width: 34px; height: 34px; border: 0; border-radius: 11px; cursor: pointer;
+  box-shadow: inset 0 0 0 2px #ffffff1f;
+}
+.tchip.on { box-shadow: inset 0 0 0 3px var(--gold); }
+.tchip[data-theme="lab"] { background: linear-gradient(150deg, #e6e0d2 0 46%, #6b4028 46%); }
+.tchip[data-theme="forest"] { background: linear-gradient(150deg, #d6e2d2 0 46%, #24402e 46%); }
+.tchip[data-theme="scrap"] { background: linear-gradient(150deg, #cbb096 0 46%, #6b4028 46%); }
+.tchip[data-theme="cheese"] { background: linear-gradient(150deg, #ccd2dc 0 46%, #3a3f47 46%); }
+.tchip[data-theme="house"] { background: linear-gradient(150deg, #c98a4b 0 46%, #574531 46%); }
+
+/* the tile that makes a room instead of opening one */
+.room.build {
+  background: repeating-linear-gradient(135deg, #2a2f39 0 9px, #232830 9px 18px);
+  box-shadow: 0 6px 14px #00000066, inset 0 0 0 2px #ffffff1a;
+  rotate: 0deg; display: grid; place-items: center; min-height: 118px;
+}
+.room.build .plus { position: relative; width: 40px; height: 40px; }
+.room.build .plus::before, .room.build .plus::after {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  background: var(--gold); border-radius: 3px;
+}
+.room.build .plus::before { width: 100%; height: 6px; }
+.room.build .plus::after { width: 6px; height: 100%; }
+
+/* the editor grid borrows the board's own tiles, so it inherits --c from here */
+.elayer { position: absolute; inset: 0; }
+.elayer.floors { filter: drop-shadow(0 4px 0 var(--edge)) drop-shadow(0 8px 12px #00000047); }
+.hint {
+  position: absolute; width: var(--c); height: var(--c);
+  translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c));
+}
+.hint::before {
+  content: ''; position: absolute; inset: 3px; border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ffffff14;
+}
+.hint.filled::before { box-shadow: none; }
+.egrid .over.lifted { opacity: .35; }
+.egrid .over.target::after {
+  content: ''; position: absolute; inset: 2px; border-radius: 8px;
+  box-shadow: inset 0 0 0 3px var(--gold);
+}
+.routedot {
+  position: absolute; width: 24%; height: 24%; border-radius: 50%;
+  background: var(--go); opacity: .8;
+}
+/* carried past the edge: let go now and it is gone */
+.egrid.dropping { box-shadow: inset 0 0 0 3px var(--alarm), 0 10px 24px #00000059; }
+
+/* palette swatches: the thing itself, not an approximation of it */
+.swatch { width: 30px; height: 30px; display: grid; place-items: center; }
+.swatch.floor { border-radius: 7px; background: var(--floor); box-shadow: 0 3px 0 var(--edge); }
+.swatch.wall {
+  border-radius: 7px; background: #20242c;
+  box-shadow: inset 0 0 0 2px #ffffff1a;
+}
+.swatch.batt svg { width: 62%; }
+.swatch.span { background: #00000038; border-radius: 6px; }
+.swatch.span svg { width: 100%; height: 70%; }
+.swatch.span path { stroke: var(--string, #8e9299); stroke-width: 7; fill: none;
+                    stroke-linecap: round; }
+.swatch.belt {
+  border-radius: 6px; background: repeating-linear-gradient(90deg, #3a342e 0 5px, #2b2622 5px 10px);
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+}
+.swatch.belt i { width: 4px; height: 12px; border-radius: 2px; background: #e0913f; }
+
+/* a room of your own: play it, change it, or throw it away */
+.playface {
+  position: relative; border: 0; background: none; padding: 4px 0 2px;
+  display: grid; place-items: center; cursor: pointer; color: inherit;
+  font-family: inherit;
+}
+
+/* the rest of what a room can do, folded away behind one mark */
+.room.mine { position: relative; padding: 10px 8px 8px; display: grid; gap: 5px; }
+.room.mine .dots {
+  position: absolute; top: 2px; right: 4px;
+  width: 28px; height: 24px; border: 0; border-radius: 7px; padding: 0;
+  background: none; color: #4a3f2e; opacity: .55;
+  font-size: 19px; line-height: 1; cursor: pointer;
+}
+.room.mine .dots:active { background: #00000014; opacity: 1; }
+.dropdown {
+  position: absolute; top: 26px; right: 4px; z-index: 6;
+  display: grid; min-width: 104px; border-radius: 11px; overflow: hidden;
+  background: var(--console2); box-shadow: 0 8px 20px #00000073, inset 0 0 0 1px #ffffff1a;
+}
+.dropdown button {
+  border: 0; background: none; color: var(--chalk); font-family: inherit;
+  font-size: 14px; text-align: left; padding: 10px 13px; cursor: pointer;
+}
+.dropdown button:active { background: #ffffff14; }
+.dropdown button.danger { color: #ff8b7a; }
+
+.roomname {
+  flex: 1; min-width: 0; border: 0; border-radius: 10px; padding: 7px 11px;
+  background: #ffffff10; color: var(--chalk); font-family: inherit;
+  font-size: 17px; font-weight: 700;
+}
+.roomname::placeholder { color: var(--chalk); opacity: .4; }
+.roomname:focus { outline: 2px solid var(--gold); background: #ffffff1a; }
+
+.keep {
+  width: 54px; height: 54px; border: 0; border-radius: 16px; padding: 0;
+  background: var(--console2); color: var(--go);
+  box-shadow: 0 4px 0 #0e1117, inset 0 1px 0 #ffffff1a;
+  display: grid; place-items: center; cursor: pointer;
+}
+.keep:active { translate: 0 3px; box-shadow: 0 1px 0 #0e1117; }
+.keep:disabled { opacity: .4; color: var(--chalk); box-shadow: none; }
+.keep svg { width: 48%; }
+.editor .play { width: 62px; height: 62px; }
+.editor .play:disabled { background: #3a4048; box-shadow: 0 5px 0 #23272d; opacity: .5; }
+
+/* how generous the tray is: the same arrows the player will see, with the
+   count under each. Minus stops at whatever the answer actually spends. */
+.trayedit { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.trayslot {
+  display: flex; align-items: center; gap: 2px;
+  border-radius: 12px; background: #ffffff0d; padding: 2px;
+}
+.trayslot button {
+  width: 26px; height: 30px; border: 0; border-radius: 9px; padding: 0;
+  background: none; color: var(--chalk); font-size: 17px; line-height: 1;
+  cursor: pointer;
+}
+.trayslot button:active { background: #ffffff1a; }
+.trayslot button:disabled { opacity: .25; cursor: default; }
+.trayslot .cnt {
+  display: flex; align-items: center; gap: 3px; padding: 0 2px;
+  font-size: 14px; font-weight: 700; color: var(--chalk);
+}
+.trayslot .cnt svg { width: 17px; height: 17px; fill: var(--chalk); opacity: .8; }
