@@ -20,6 +20,16 @@ npm run build        # → dist/index.html, a single self-contained file
 Open `dist/index.html` from disk and it works. Everything is inlined: the
 JavaScript, the CSS, the font, every sprite. It is around 250 KB.
 
+## Playing the current build
+
+- **<https://yggi.github.io/robby/>** — `main`, always the latest that passed CI.
+- **<https://yggi.github.io/robby/b/>** — one build per branch, for work in
+  progress. A branch's build disappears when the branch does.
+
+Because the whole game is one self-contained file, those pages are the same
+artefact the tests ran against, and it works just as well saved to a phone's
+home screen with no network. See `.github/workflows/pages.yml`.
+
 ## Scripts
 
 | Command | What it does | Takes |
