@@ -194,8 +194,31 @@ move, stop adjusting the number and go and find out what it resolves against.
 ---
 
 **Where it ended up:** four worlds of eight rooms, a bench world, an endless
-practice room, a workshop, a level editor, 259 unit tests, 189 fast checks, 141
+practice room, a workshop, a level editor, 259 unit tests, 190 fast checks, 141
 behavioural checks, and one 250 KB HTML file that runs from a phone with no
 network.
 
 For Emilia.
+
+---
+
+## 11. Emilia played it
+
+The dedication stopped being aspirational.
+
+She is five, and she solves every level in the game on her own. While she thinks
+she **makes the arrow shapes with her hand** — tracing the direction in the air
+before she picks up the token. Nothing in the game asks for that. It is a child
+rehearsing a plan away from the board and then committing it, which is the one
+idea the whole thing was built to teach, arriving without a word of text.
+
+The surprise was the editor. It shipped as "a first slice" and it is the part
+that took hold: she and her father build rooms for each other to solve. Belts
+and bridges in adult hands make rooms that are hard for much older children, so
+the ceiling is a long way above the shipped content.
+
+That reorders the open threads in `HANDOFF.md`. The editor's missing pieces are
+not a rough edge on a side feature any more, and sharing a room by URL stops
+being a neat idea the moment rooms are already being passed between people.
+
+Written up properly in `HANDOFF.md` §11.

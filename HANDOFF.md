@@ -309,12 +309,8 @@ step in that direction.
 **The workshop is one slot per character.** Antenna, tail, nose, four parts
 each. Bits accumulate faster than there is anything to spend them on.
 
-**Nothing has been tested with an actual child.** Everything about the tuning is
-a considered guess. The specific numbers I would watch: the 380ms step (the tell
-is whether they look at the *strip* or only at the robot — if only the robot,
-the highlight is not landing), whether the board shudder on a bonk reads as "the
-robot hit something" or "the screen is broken", and whether one-tap slot removal
-gets triggered accidentally.
+**~~Nothing has been tested with an actual child.~~** It has been now, and it
+worked. See §11.
 
 ## 9. Weak points
 
@@ -361,7 +357,47 @@ been driven by keyboard end-to-end or heard through a screen reader.
   nesting into a flat list is the painful version. Design the strip for it
   before writing any of it.
 
-## 11. Handover checklist
+## 11. What happened when a child played it
+
+Emilia, five — the Emilia of the dedication.
+
+**She solves every level in the game on her own.** All four worlds, unassisted.
+
+The thing worth writing down is *how* she does it: **she makes the arrow shapes
+with her hand as she reasons**, tracing the direction in the air before she
+reaches for the token. Nobody taught her that and nothing in the game asks for
+it. Some notes on what it means, and what it settles:
+
+- The gap between plan and execution landed. She is not driving the robot; she
+  is rehearsing a plan away from the board and then committing it. That is the
+  entire thesis of §2, and it arrived without a word of text.
+- The direction colours are doing their job. The gesture is a *direction*, not a
+  symbol lookup — she is not decoding an arrow glyph, she is recalling a way to
+  go and matching it under her thumb.
+- The three tuning numbers §8 said to watch were guesses that came out right.
+  The 380ms step, the bonk shudder and one-tap slot removal all survived contact
+  with the only user who matters, and none of them needs revisiting on current
+  evidence.
+
+**The editor is the runaway success**, and it was shipped as "a first slice".
+She loves it, and it turned the game into something played *between* people:
+she and her father build rooms for each other to solve. An adult building with
+belts and bridges can make rooms that are a real challenge for older children,
+so the ceiling is far higher than the shipped content suggests.
+
+That reorders §8 completely. The editor's missing pieces — gates and plates,
+one-ways, keys, multi-part goals, a grid that is not fixed at 9×7 — are no
+longer a rough edge on a side feature. They are the constraint on the part of
+this that people actually use, and I would take them before anything else in
+that list. Sharing a built room (§10: "the map is `string[]`, a room is a short
+URL") stops being a neat idea and becomes the obvious next feature, because
+rooms are already being passed between people by hand.
+
+The one thing still untested is the beginning: Emilia had an adult beside her
+the first time. Whether a child meets Robby cold and gets moving is a different
+question from whether the game is solvable, and it is the one I would watch next.
+
+## 12. Handover checklist
 
 - `npm install && npm test` should be green in about fifteen seconds.
 - `npm run check:full` before any release.
