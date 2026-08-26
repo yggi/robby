@@ -1,4 +1,19 @@
-# Handoff
+# Handoff — August 2026
+
+> **This is a record, not a live document. Do not maintain it, and do not act on
+> its numbers.**
+>
+> It was the whole briefing until the project grew the surfaces described in
+> `CLAUDE.md`, and its content is now distributed: durable truth to `MEMORY.md`
+> and `docs/design/`, method lessons to `META.md`, open questions to `NOTES.md`,
+> and work-to-do to `BOARD.md`. It is kept whole because it is the best account
+> of a particular moment — §11 especially, which is the only playtest anybody
+> has, preserved at `docs/design/game/playtest.md`.
+>
+> Three things in it were already out of date when it was archived, and are
+> corrected in `MEMORY.md`: there are **eight** stylesheets, not six; **five**
+> chapters ship, not four (Test World is on the level select); and
+> `Board.svelte` is **584** lines, not ~500.
 
 For whoever picks this up next. It covers what the thing is, how it is built,
 why it is built that way, where it is thin, and what I would do next.

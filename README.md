@@ -72,5 +72,18 @@ broken level.
 Nothing else in this codebase matters as much as that. If you are about to
 write something that judges whether a level is any good, ask the solver instead.
 
-See `HANDOFF.md` for the architecture and the reasoning, `MEMORY.md` for the
-facts that are easy to get wrong, and `LOG.md` for how it got here.
+## Where the documentation is
+
+`CLAUDE.md` is the entrypoint and says what to read in what order. In short:
+
+| | |
+| --- | --- |
+| `MEMORY.md` | what the project *is* — durable facts, and the index to `docs/design/` |
+| `META.md` | what building it taught us about building it, each lesson with its scar |
+| `NOTES.md` | what is unresolved right now |
+| `BOARD.md` | what to do next |
+| `LOG.md` | how it got here. History, not context |
+
+`docs/design/` holds the detail in four clusters — **game**, **feel**, **code**
+and **testing** — each with a page that indexes its own tree.
+`docs/handoff-2026-08.md` is the original handover, kept as a record.

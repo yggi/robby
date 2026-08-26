@@ -1,8 +1,81 @@
-# Development log
+# LOG.md — worklog
 
-Written from the whole history, in the order things happened. It is here because
-this project has no git history, and because *why* something is the way it is
-turned out to matter more than what it is.
+Append-only. **Newest first**, above the numbered history. What was actually
+done, and closed cards. Not plans, not open questions.
+
+**Target: 1000 lines, act at 1200** (`CLAUDE.md`). At 1200, cut the oldest
+sections into a `docs/log/` archive and link them here. Cut back to 1000 or
+under: an archive pass that leaves you at 1199 is one you will repeat.
+
+Entry format:
+
+```
+## YYYY-MM-DD — title
+Cards: [id] ...
+What happened, in past tense. Anything tried and rejected, and why.
+```
+
+Everything below the first entry is the **narrative history** — written from the
+whole project in the order things happened, because this project had no git
+history when it arrived, and because *why* something is the way it is turned out
+to matter more than what it is. It is numbered rather than dated for that
+reason. New work goes above it, dated.
+
+---
+
+## 2026-08-26 — the surfaces
+
+Cards: [R-000] closed. `BOARD.md`, `NOTES.md` and `META.md` created;
+`docs/design/` seeded; `HANDOFF.md` archived.
+
+`CLAUDE.md` was a briefing that pointed at three documents. It is now a contract:
+a read order, a write order, and five surfaces that each have a stated job, a
+target size and a line at which they get condensed rather than shaved. Structure
+follows `laborsim`, which has been running it long enough to have opinions about
+the band.
+
+**`HANDOFF.md` was the problem this solves.** 418 lines holding durable truth,
+method lessons, open questions and work-to-do *at once* — four surfaces in a
+trench coat, which is why none of it could be kept current: there was nowhere to
+put an update that did not also mean re-reading the other three kinds of thing.
+It has been distributed and archived at `docs/handoff-2026-08.md`, with a header
+saying it is a record.
+
+Rejected on the way: **deleting it.** §11 is the only playtest that exists and
+the document is the best account of a particular moment; a record that is clearly
+marked as a record costs nothing and cannot mislead. Also rejected: **leaving it
+at the root as a second entrypoint.** Two documents claiming to be the briefing
+is the drift hazard the whole structure exists to remove, and it would have
+started on the first session that updated one of them.
+
+**Three drifts were found while seeding**, all of the same kind — the tree moved
+and the prose did not:
+
+- **six stylesheets → eight.** `index.css` imports eight, and the comment at the
+  top of that file is right where the docs were wrong.
+- **four worlds → five chapters.** `chapters` is
+  `[lab, forest, scrapyard, cheeseMoon, testWorld]` and the level select shows
+  six tiles. Test World ships to players. `README.md` knew; `HANDOFF.md` and
+  `MEMORY.md` did not, and §11's "all four worlds" reads differently once you
+  know there is a fifth on the menu. Now a thread in `NOTES.md`, because the
+  question is not a fact to record but a decision nobody made.
+- **`Board.svelte` ~500 → 584 lines**, and the view has **nine plain modules**
+  the architecture description elides behind an ellipsis — about 1,200 lines, a
+  third of the view. Now in the repo map, and the file is a card.
+
+A fourth thing turned up while writing the rules page: **no shipped level
+anywhere uses a one-way**, though `parse.ts` parses `^ v < >`, `simulate.ts`
+runs them and `solve.ts` solves them. Test World's own comment claims "every
+trigger the engine supports has a level here". Carded as [R-004], with the check
+that keeps the claim true rather than a promise to remember.
+
+`src/docs.test.ts` checks the parts of a documentation tree a test can check:
+every markdown path written down resolves, every cluster page indexes its own
+tree, and no content page has crept into the `MEMORY.md` index. Each of the
+three was verified by **planting the fault and watching it fail** — a broken
+link, an unindexed page, a content page in the index — and each carries the
+sample-size assertion `CLAUDE.md` requires, because the alternative is the
+`(0 checked)` incident again with different subjects.
 
 ---
 
