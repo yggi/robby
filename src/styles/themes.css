@@ -1,0 +1,110 @@
+/* ══════════════════════════ THEMES ══════════════════════════
+   Keyed on the attribute alone, not on which element carries it. These were
+   written as `.scene[...] , .rooms[...]` and the editor — a third thing that
+   wants a world's colours — silently got none of them, so its tiles drew with
+   no floor colour and no pattern. Anything with data-theme now gets the lot. */
+
+/* World 1 — The Lab. Robby's home: papered wall, wooden floor, pegboard of
+   tools, lamps on cords. A room, not a starfield. */
+[data-theme="lab"] {
+  --bg: #55391f;
+  --floor: #e6e0d2; --edge: #a79c86; --gate: #f0c419; --plan: #8d8371;
+  --pattern:
+    repeating-linear-gradient(90deg, #00000010 0 1px, transparent 1px 27px),
+    repeating-linear-gradient(0deg, #00000010 0 1px, transparent 1px 27px);
+  --markcol: #00000014; --markop: 1;
+}
+
+/* World 2 — the Mechanical Forest. Green, silver and purple. */
+[data-theme="forest"] {
+  --bg: #1a3222;
+  --floor: #d6e2d2; --edge: #8ba38c; --gate: #b07dff; --plan: #7f9a82;
+  --pattern:
+    radial-gradient(circle at 26% 32%, #00000012 0 3px, transparent 3px),
+    radial-gradient(circle at 74% 70%, #0000000e 0 4px, transparent 4px);
+  --patsize: 24px 24px, 33px 33px;
+  --markcol: #00000012; --markop: 1;
+}
+
+/* The scrapyard: rust, warm muted reds and oranges, and a lot of brown. */
+[data-theme="scrap"] {
+  --bg: #4a2c1b;
+  --floor: #cbb096; --edge: #8a6f56; --gate: #d98a3c; --plan: #7a5c44;
+  --pattern:
+    repeating-linear-gradient(90deg, #00000012 0 2px, transparent 2px 30px),
+    radial-gradient(circle at 30% 40%, #00000010 0 3px, transparent 3px);
+  --patsize: auto, 19px 19px;
+  --markcol: #0000001a; --markop: 1;
+}
+
+[data-theme="house"] {
+  --bg: linear-gradient(180deg, #e9dcc4 0%, #d8c5a2 100%);
+  --floor: #c98a4b; --edge: #8f5b2c; --gate: #6a8caf; --plan: #6b4520;
+  --pattern: repeating-linear-gradient(90deg, #00000012 0 2px, transparent 2px 27px);
+  --markcol: #00000016; --markop: 1;
+}
+[data-theme="garden"] {
+  --bg: radial-gradient(120% 90% at 50% 8%, #35784b 0%, #14351f 100%);
+  --floor: #efe0bf; --edge: #b39a6d; --gate: #2b8e8a; --plan: #947d4e;
+  --pattern: radial-gradient(circle at 30% 40%, #00000014 0 3px, transparent 3px),
+             radial-gradient(circle at 72% 68%, #00000010 0 4px, transparent 4px);
+  --patsize: 22px 22px, 31px 31px;
+}
+/* Everything in the city is seen from directly above, like the board itself:
+   rooftops, not facades. A skyline would fight the top-down road. */
+[data-theme="city"] {
+  --bg: linear-gradient(150deg, #202638 0%, #171c2b 55%, #10141f 100%);
+  --floor: #4c515e; --edge: #292d38; --gate: #f2f2f2; --plan: #a3adbe;
+  --pattern: radial-gradient(circle at 20% 30%, #ffffff0a 0 2px, transparent 2px);
+  --patsize: 13px 13px;
+  --markcol: #f5c542; --markop: .92;
+}
+[data-theme="factory"] {
+  --bg: linear-gradient(180deg, #232833 0%, #14181f 100%);
+  --floor: #97a2b0; --edge: #5b6572; --gate: #f0c419; --plan: #59636f;
+  --pattern: repeating-linear-gradient(135deg, #00000014 0 5px, transparent 5px 11px);
+  --markcol: #0000001c; --markop: 1;
+}
+[data-theme="ship"] {
+  --bg: radial-gradient(90% 70% at 70% 18%, #1c2c5a 0%, #050812 72%);
+  --floor: #cdd7e4; --edge: #7c8a9d; --gate: #4fd1ff; --plan: #78879d;
+  --pattern: repeating-linear-gradient(90deg, #00000012 0 1px, transparent 1px 22px),
+             repeating-linear-gradient(0deg, #00000012 0 1px, transparent 1px 22px);
+  --markcol: #4fd1ff4d; --markop: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  .bot, .lean, .post, .board, .decor { transition: none; }
+}
+
+/* Screens announce which way you went: deeper into the game pushes in, backing
+   out pulls away. Each root animates on mount, so no keyed wrapper is needed —
+   Svelte builds these fresh whenever the screen changes. */
+.menu, .rooms, .scene, .console {
+  animation: screenIn 380ms cubic-bezier(.2,.85,.3,1) backwards;
+}
+.screen .console { animation-delay: 70ms; }
+/* The direction of travel is set on the screen wrapper and inherited, not read
+   by each screen. A screen that is on its way out is already inert, and asking
+   it to re-render makes it re-evaluate deriveds belonging to a destroyed
+   effect — which is what Svelte's derived_inert warning is about. */
+.screen.back .menu, .screen.back .rooms, .screen.back .store,
+.screen.back .scene, .screen.back .console { animation-name: screenBack; }
+@keyframes screenIn { from { opacity: 0; transform: scale(.93) translateY(16px); } }
+@keyframes screenBack { from { opacity: 0; transform: scale(1.07); } }
+
+/* The cheese moon. Everything is the same yellow, so the path is told apart by
+   being smooth and lit while the ground around it is pocked and matte. */
+[data-theme="cheese"] {
+  --bg: #191c22;
+  /* the walkway is dusty moon rock; the cheese is a highlight, never the ground */
+  --floor: #ccd2dc; --edge: #767d8a; --gate: #f5d24f; --plan: #8a9099;
+  --pattern:
+    radial-gradient(circle at 28% 34%, #00000014 0 5px, transparent 5px),
+    radial-gradient(circle at 74% 66%, #0000000f 0 7px, transparent 7px);
+  --patsize: 27px 27px, 39px 39px;
+  --markcol: #0000001a; --markop: 1;
+  /* the one thing a cheese moon must get right */
+  --string: #f5d24f; --stringw: 6; --sagt: 2.6s;
+}

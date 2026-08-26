@@ -1,0 +1,18 @@
+/* Baloo 2, embedded. Only the latin woff2 subsets — the legacy .woff files
+   Fontsource also ships would double the payload for browsers that no longer
+   exist. The game has to run from a file with no network, so the font travels
+   with it rather than being fetched. */
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./assets/baloo-2-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('./assets/baloo-2-latin-700-normal.woff2') format('woff2');
+}

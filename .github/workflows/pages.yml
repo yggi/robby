@@ -1,0 +1,83 @@
+name: deploy
+
+# The game should be one tap away on a phone — that is the only place a game for
+# a five-year-old can honestly be judged — and that has to be true of *every*
+# branch, not just whichever one pushed last.
+#
+# `main` is published at the site root. Every other branch is published beside
+# it under `/b/<slug>/`, and `/b/` is an index of what is currently up. A
+# branch's directory is removed when the branch is, so the index cannot outlive
+# the work.
+#
+# This publishes to the `gh-pages` branch rather than through
+# `actions/deploy-pages`, because that action replaces the whole site with one
+# artifact — so any branch push would silently overwrite what `main` published.
+# Pages source must therefore be **Deploy from a branch: gh-pages / (root)** in
+# Settings -> Pages.
+#
+# Note what is *not* here, compared with the same workflow in `laborsim`: no
+# BASE_PATH. `vite-plugin-singlefile` inlines the script, the styles, the font
+# and every sprite, so the built `index.html` contains no `src` or `href` to
+# anywhere at all. The artefact is genuinely path-independent — it works at the
+# site root, at `/b/<slug>/`, and from `file://` on a phone with no network.
+# There is nothing to tell it where it lives, which is the whole point of it.
+on:
+  push:
+    branches: [main, "claude/**"]
+  delete:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# The publish is a read-modify-write of one branch, so runs must not overlap.
+# Let a running one finish rather than cancelling it; skip superseded ones.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # A branch being deleted has nothing to build, and its checkout is gone.
+  # Nothing here but the removal and a fresh index.
+  cleanup:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/publish.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Withdraw the deleted branch
+        run: scripts/publish.sh remove "${{ github.event.ref }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build:
+    if: github.event_name != 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `check:full` is vitest, then the build, then both smoke suites — every
+      # par in the game re-derived from the solver, and levels played through in
+      # jsdom. README calls test:full "opt-in, run it before shipping"; putting a
+      # build in front of children is shipping, and CI is where the two minutes
+      # nobody wants to wait for locally are free.
+      #
+      # It also leaves `dist/` exactly as the smoke suites found it, so what gets
+      # published is the artefact that was tested, not a rebuild of it.
+      - name: Check
+        run: npm run check:full
+
+      - name: Publish
+        run: scripts/publish.sh put "$GITHUB_REF_NAME" dist
+        env:
+          GH_TOKEN: ${{ github.token }}

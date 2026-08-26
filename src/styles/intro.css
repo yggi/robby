@@ -1,0 +1,48 @@
+/* ══════════════════════════ ARRIVING ══════════════════════════ */
+
+.intro {
+  position: relative; height: 100dvh; overflow: hidden;
+  display: grid; place-items: center; background: var(--bg); color: var(--chalk);
+}
+.intro .decor { opacity: .55; }
+.intro::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 45%, transparent 30%, #000000a6 100%);
+}
+.introcard {
+  position: relative; z-index: 2; display: grid; justify-items: center; gap: 8px;
+  padding: 0 24px; text-align: center;
+  animation: arrive 620ms cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(18px) scale(.94); } }
+
+.introemblem {
+  width: 116px; height: 116px; border-radius: 34px; display: grid; place-items: center;
+  box-shadow: inset 0 0 0 3px #ffffff1f, 0 14px 34px #00000073;
+  animation: settle 3s ease-in-out infinite;
+}
+@keyframes settle { 50% { transform: translateY(-5px); } }
+.introemblem .emblem { width: 84%; height: 84%; }
+
+.introcard h1 {
+  margin: 6px 0 0; font-size: clamp(26px, 7vw, 34px); font-weight: 800;
+  background: linear-gradient(180deg, #fff6e0, #ffc46a);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.introcard p { margin: 0; font-size: 15px; opacity: .68; }
+
+/* one mark per room ahead, filling in as the card settles */
+.introrooms { display: flex; gap: 7px; margin-top: 12px; }
+.introrooms i {
+  width: 9px; height: 9px; border-radius: 50%; background: #ffffff2e;
+  animation: lightup 300ms backwards;
+}
+.introrooms i:nth-child(1) { animation-delay: 500ms; }
+.introrooms i:nth-child(2) { animation-delay: 570ms; }
+.introrooms i:nth-child(3) { animation-delay: 640ms; }
+.introrooms i:nth-child(4) { animation-delay: 710ms; }
+.introrooms i:nth-child(5) { animation-delay: 780ms; }
+.introrooms i:nth-child(6) { animation-delay: 850ms; }
+.introrooms i:nth-child(7) { animation-delay: 920ms; }
+.introrooms i:nth-child(8) { animation-delay: 990ms; }
+@keyframes lightup { from { opacity: 0; transform: scale(0); } }

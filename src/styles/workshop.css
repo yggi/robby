@@ -1,0 +1,90 @@
+/* ══════════════════════════ THE WORKSHOP ══════════════════════════
+   Where bits go. Nothing bought here changes a single rule — it is
+   entirely for the pleasure of having chosen it. */
+
+.store {
+  position: relative; height: 100dvh; overflow-y: auto; color: var(--chalk);
+  padding: 22px 16px calc(28px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(120% 70% at 50% 0%, #3d3630 0%, #24222a 46%, #14141b 100%);
+}
+.store .roomsbar { margin-bottom: 6px; }
+
+.stands {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: clamp(6px, 3vw, 26px); width: min(560px, 96vw); margin: 0 auto;
+}
+.stand { flex: 1; display: grid; justify-items: center; gap: 12px; }
+.figure {
+  position: relative; display: grid; place-items: end center;
+  width: 100%; height: clamp(120px, 30vw, 168px);
+}
+.figure::after {                       /* a turntable to stand the piece on */
+  content: ''; position: absolute; bottom: -8px; left: 50%; translate: -50% 0;
+  width: 84%; height: 22px; border-radius: 50%;
+  background: radial-gradient(ellipse, #ffffff1a, #ffffff00 70%);
+}
+.stand .bot, .stand .cat, .stand .launchpad {
+  position: relative; translate: none; width: auto; height: 100%;
+  display: grid; place-items: center;
+}
+.stand .bot svg { width: auto; height: 100%; }
+.stand .cat .cat-svg { width: auto; height: 84%; }
+/* on its stand in the workshop there is no pad to stand on, so it simply fills */
+.launchpad.showpiece .rocket {
+  position: relative; left: auto; bottom: auto; translate: none; height: 100%;
+}
+.launchpad.showpiece .manifest, .launchpad.showpiece .pad { display: none; }
+
+.slotchip {
+  display: grid; justify-items: center; gap: 3px;
+  padding: 8px 10px 6px; border: 0; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(180deg, var(--console2), var(--console));
+  box-shadow: 0 4px 0 #0d1016, inset 0 1px 0 #ffffff14;
+  color: var(--chalk); font-family: inherit;
+  transition: translate 90ms, box-shadow 90ms;
+}
+.slotchip:active { translate: 0 3px; box-shadow: 0 1px 0 #0d1016; }
+.slotchip.open { box-shadow: 0 4px 0 #0d1016, inset 0 0 0 2px var(--gold); }
+.slotchip b { font-size: 12px; font-weight: 700; opacity: .6; }
+.slotchip .pv { width: 40px; height: 34px; }
+.pv { overflow: visible; }
+
+/* the parts bin: a steel tray of compartments */
+.bin {
+  width: min(560px, 96vw); margin: 22px auto 0;
+  border-radius: 16px; padding: 0 10px 12px;
+  background: linear-gradient(180deg, #3a3f49, #262a32);
+  box-shadow: inset 0 0 0 2px #ffffff14, 0 10px 24px #00000066;
+  animation: binopen 240ms cubic-bezier(.3,1.4,.5,1);
+}
+@keyframes binopen { from { opacity: 0; transform: translateY(-14px) scaleY(.86); } }
+.binlip { display: flex; justify-content: center; gap: 6px; padding: 7px 0 9px; }
+.binlip i { width: 26px; height: 4px; border-radius: 2px; background: #ffffff26; }
+
+/* The parts bin's tray, not the console's. It was written as a bare `.tray`,
+   which also matched the arrow tray downstairs and gave it `overflow-x: auto` —
+   and a container that clips one axis clips the other, which sliced the corner
+   off every arrow's count badge. */
+.bintray { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.bay {
+  position: relative; flex: 1 0 82px; display: grid; justify-items: center; gap: 4px;
+  padding: 10px 6px 8px; border: 0; border-radius: 11px; cursor: pointer;
+  background: #171a20; box-shadow: inset 0 0 0 2px #ffffff0f, inset 0 6px 10px #00000059;
+  color: var(--chalk); font-family: inherit;
+  transition: box-shadow 160ms, scale 140ms;
+}
+.bay:active { scale: .95; }
+.bay.worn { box-shadow: inset 0 0 0 2px var(--go), inset 0 6px 10px #00000059; }
+.bay.locked { opacity: .34; cursor: not-allowed; filter: grayscale(1); }
+.bayart { width: 46px; height: 40px; display: grid; place-items: center; }
+.bayart .pv { width: 100%; height: 100%; }
+.bayname { font-size: 11.5px; opacity: .62; }
+.bay .tick { position: absolute; top: 4px; right: 6px; color: var(--go); font-weight: 800; }
+.bay .tag { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+.bay .tag.owned { opacity: .3; }
+.bay .tag .bit.static { width: 15px; height: 15px; }
+.bay .tag .bit b { font-size: 8px; }
+
+/* a fitted part comes to life the moment it is worn */
+.spinner { transform-origin: 50px 11px; animation: spin 900ms linear infinite; }
