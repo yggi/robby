@@ -1,3 +1,4 @@
+import { neighbours } from '../engine/types'
 /**
  * The things in Robby's rooms.
  *
@@ -203,7 +204,7 @@ export function scatterProps(
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       if (!isWall(x, y)) continue
-      const beside = [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dx, dy]) => !isWall(x + dx, y + dy))
+      const beside = neighbours({ x, y }).some((n) => !isWall(n.x, n.y))
       if (!beside) continue
       const n = hash(`${levelId}:${x}:${y}`)
       if (n % 100 < 68) continue

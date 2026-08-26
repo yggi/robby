@@ -1,5 +1,5 @@
 import { simulate } from './simulate'
-import { DIRS, type Dir, type Level, type State, type Trace } from './types'
+import { DIRS, spend, type Dir, type Level, type State, type Trace } from './types'
 
 function key(s: State): string {
   const cells = s.world.cells
@@ -15,9 +15,8 @@ function tail(t: Trace): State | null {
 
 /** Does this program stay inside the level's token tray? */
 export function withinTray(level: Level, program: Dir[]): boolean {
-  const used: Record<string, number> = {}
-  for (const d of program) used[d] = (used[d] ?? 0) + 1
-  return Object.entries(used).every(([d, n]) => (level.tray[d as Dir] ?? 0) >= n)
+  const used = spend(program)
+  return DIRS.every((d) => used[d] <= (level.tray[d] ?? 0))
 }
 
 /**

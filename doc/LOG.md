@@ -17,6 +17,108 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — one fact, written once
+
+Cards: [R-022] opened and closed. [R-002], [R-004] and [R-006] got cheaper.
+[R-023]…[R-027] opened from what the audit turned up.
+
+The engine was sound; the layer just above it — **turning a map string into a
+playable level** — had been written once per caller and the copies had started
+to disagree. Two new modules and a lot of deletions:
+
+- **`src/engine/legend.ts`** — the map format as a table, read in both
+  directions. The characters were being interpreted in **five** places: the
+  if-else ladder in `parse.ts`, `CHAR`/`BELTS` in `editor.ts`, `PART_CHARS` in
+  `generate.ts`, a four-character ladder in `MiniMap.svelte`, and raw
+  `ch === '*'` tests in `Editor.svelte`'s markup. Now one list; `charFor` is the
+  inverse the parser never had, which is what lets the editor's palette be a
+  list of *tiles* rather than a second copy of the table.
+- **`src/engine/level.ts`** — `probe`, `derive`, `trayFor`, `OPEN_TRAY`,
+  `DRAFT_DEPTH`. Three callers built the same placeholder `Level`, solved it,
+  derived a tray and patched both back in; all three spelled the all-nines tray
+  as a bare literal with nothing saying it exists to defeat `withinTray`.
+
+**Line count is not the win, and pretending otherwise would be dishonest.**
+Engine code, comments stripped: **868 → 921 lines**, i.e. slightly *up*, because
+two new modules arrived and `CELL_KINDS`/`ITEM_KINDS` as `const` arrays cost
+more lines than the unions they replaced. What went down is **the number of
+places a fact is written**: the legend 5 → 1, the probe-level dance 3 → 1,
+`trayFor` 2 → 1, the tray histogram `par.filter(p => p === d).length` 5 → 1, the
+gate-opening loop 3 → 1, the direction-vector table 6 → 1, the belt-rotation
+table 3 → 1, `"x,y"` keys 4 → 1, and "which chapters can generate" 2 → 1.
+
+**Three name collisions were living inside `src/engine/` itself** — the failure
+mode `doc/design/code/conventions.md` calls this codebase's recurring one, six
+times over in CSS, in the one place no guard looks. `at` was both
+`(world, p) → Cell` and `(draft, x, y) → string`; `toMap` both synthesised a
+grid and joined rows; `Cell` was both a tile and a `{x, y}`. Renamed to
+`cellAt` / `draftMap` / `renderMap`, and generate's `Cell` was simply a `Vec2`.
+
+### Two real defects, both consequences of the duplication
+
+**`clone(d: Draft)` returned `{ theme, cells }` only**, dropping `name` and
+`tray` — and `paint`, `rotate`, `move` and `discard` all went through it, so
+naming a room or tightening its tray and then painting one more tile threw both
+away. `Editor.svelte` rebuilt them with a spread of its own, which is why it
+never showed. **`playable()` had no completeness check**, so a saved room with
+no `R` reached `parseMap` and *threw* — inside a `$derived` over everything in
+storage, with no error boundary ([R-014]). Both now fail a test before the fix
+and pass after; the fault was planted for each and watched to fail.
+
+### Things that turned out not to be true
+
+Worth recording, because two of them were confidently believed while planning.
+
+- **A key-opened gate is not misclassified.** `openAllGates` pushed to `changed`
+  but never to `kind`, which looked like it would fall through the event ternary
+  to `'collapse'` — but `kind.push('pickup')` happens *first* and `'pickup'` is
+  ahead of `'gate'` in the priority chain, so the frame was always reported
+  correctly. The three loops were still worth collapsing into one; no bug was
+  fixed by it, and claiming one would have been wrong.
+- **The round-trip test cannot prove the legend is right.** Parse and serialise
+  share the table, so a consistent relabelling round-trips perfectly. Swapping
+  `E` and `W` was tried: it **passed** the round trip while failing twenty tests
+  elsewhere. The comment above it now says what it proves (agreement) and what
+  proves the rest (the solver re-deriving every shipped par). This is
+  `doc/META.md`'s *a check that only catches deletion is half a check* with a
+  new face — a check that can only catch *disagreement*.
+- **The first minimap check passed on a planted fault.** It counted `.mini i.m`
+  marks, and the parts lying on the floor were also drawing `m`, so a Scrapyard
+  whose conveyors had stopped being drawn still scored 5. `m` now means terrain
+  machinery only, and the fault takes it to 0. **Planting the fault is the only
+  reason that was found**; the check had already been written, run and seen to
+  pass.
+
+### Found while auditing, not fixed here
+
+**Plate `E` does not exist, and gate 5 therefore has no plate.** The legend
+advertised `A-I` — nine plates — but `E` was spent on the east conveyor first
+and the old parser read the belt table before the letter range, so `E` in a map
+has always been a conveyor. Left alone deliberately: the characters *are* the
+save format, and moving one would silently rewrite every room anybody has
+already built. `legend.ts` now states the gap and a test asserts no character is
+spent twice, so it is visible rather than accidental.
+
+**`oneway` was missing from the bare-kind guard's list** (`smoke.fast.mjs`), so
+a bare `.oneway {}` rule was the one board kind nothing would have caught — the
+same kind that no shipped level uses ([R-004]). One word, added. Deriving that
+list from the engine rather than re-typing it is [R-023].
+
+### Also
+
+`MiniMap.svelte` reads the parsed world instead of the map characters, so belts,
+bridges, gates and one-ways stop drawing as indistinguishable plain path — the
+Scrapyard's eight thumbnails now show their machinery (64 marks where there were
+none). `game.svelte.ts` lost its `chapter.id as ChapterId` cast: `canGenerate()`
+is a type guard, and the two statements of which worlds have a generator are one.
+`generate.test.ts` keeps its two hand-written neighbour walks on purpose — a test
+that shared a helper with the code under test would be testing nothing.
+
+**Counted rather than estimated:** 266 → **276** unit tests, 190 → **191** fast
+checks, **142** full checks unchanged. `solve()` on the Scrapyard finale: 338ms
+for its 13-token par. Driven by hand in a real browser as well as in jsdom —
+naming a room, tightening its tray, painting and turning a conveyor.
+
 ## 2026-08-26 — `docs/` → `doc/`
 
 Cards: none. A rename.

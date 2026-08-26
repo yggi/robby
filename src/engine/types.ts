@@ -21,21 +21,72 @@ export interface Vec2 {
   y: number
 }
 
-export type CellKind =
-  | 'wall'
-  | 'floor'
-  | 'exit' // the rocket pad — only lets the robot leave if it is carrying enough
-  | 'blocked' // a way through that is shut for good: rubble, vines, a fallen trunk
+/**
+ * The three things everybody wants from `DELTA`, so that nobody writes out
+ * `[[1,0],[-1,0],[0,1],[0,-1]]` again. Five copies of that array and a second
+ * `[Dir, dx, dy]` table in the generator is what these replace; the array
+ * literals were all subtly ordered differently, which made them impossible to
+ * compare by eye.
+ */
+export const step = (p: Vec2, d: Dir): Vec2 => ({ x: p.x + DELTA[d].x, y: p.y + DELTA[d].y })
+/** The four tiles a robot could walk to from `p`. */
+export const neighbours = (p: Vec2): Vec2[] => DIRS.map((d) => step(p, d))
+/**
+ * All eight tiles touching `p`, diagonals included — what a cat may bolt to,
+ * and (called on the origin) the eight directions something may scamper off in.
+ */
+export const around = (p: Vec2): Vec2[] => [
+  ...neighbours(p),
+  { x: p.x - 1, y: p.y - 1 },
+  { x: p.x + 1, y: p.y - 1 },
+  { x: p.x - 1, y: p.y + 1 },
+  { x: p.x + 1, y: p.y + 1 },
+]
+/** The one spelling of a position used as a Set/Map key. */
+export const posKey = (p: Vec2) => `${p.x},${p.y}`
+
+/**
+ * How many of each direction a program spends. The tray, the solver's budget
+ * check and the editor's minus button are all this histogram; it used to be
+ * written out as `par.filter((p) => p === d).length` in five places.
+ */
+export function spend(program: Dir[]): Record<Dir, number> {
+  const used: Record<Dir, number> = { up: 0, right: 0, down: 0, left: 0 }
+  for (const d of program) used[d]++
+  return used
+}
+
+/**
+ * Every kind of tile, as a `const` array with the union derived from it — the
+ * same shape as `THEMES` below, and for the same reason. A kind that exists
+ * only as a member of a union cannot be enumerated at runtime, so nothing can
+ * check that it has a map character, a palette or a room to appear in. Written
+ * this way, `legend.ts` can assert that every one of them is reachable.
+ */
+export const CELL_KINDS = [
+  'wall',
+  'floor',
+  /** the rocket pad — only lets the robot leave if it is carrying enough */
+  'exit',
+  /** a way through that is shut for good: rubble, vines, a fallen trunk */
+  'blocked',
   /**
    * A conveyor. Stepping on costs one instruction; the ride is free. It carries
    * the robot along `dir` until the next tile is not enterable, at which point
    * he is simply standing there. It cannot be walked onto against its flow.
    */
-  | 'belt'
-  | 'gate' // blocks until opened
-  | 'plate' // trigger: opens linked gate
-  | 'oneway' // may only be exited in `only`
-  | 'fragile' // becomes wall once the robot leaves it
+  'belt',
+  /** blocks until opened */
+  'gate',
+  /** trigger: opens linked gate */
+  'plate',
+  /** may only be exited in `only` */
+  'oneway',
+  /** becomes wall once the robot leaves it */
+  'fragile',
+] as const
+
+export type CellKind = (typeof CELL_KINDS)[number]
 
 export interface Cell {
   kind: CellKind
@@ -50,7 +101,9 @@ export interface Cell {
   collapsed?: boolean
 }
 
-export type ItemKind = 'battery' | 'key' | 'cog' | 'coil' | 'core'
+export const ITEM_KINDS = ['battery', 'key', 'cog', 'coil', 'core'] as const
+
+export type ItemKind = (typeof ITEM_KINDS)[number]
 
 /**
  * What the level is actually asking for. A key is a tool, not an objective —

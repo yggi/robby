@@ -46,7 +46,9 @@ hand.
 ### [R-002] The editor can place a one-way
 - **what:** `oneway` is parsed (`^ v < >`), simulated and solvable, and used by
   nothing. The editor is where it would first pay: a room whose route is forced
-  in one direction is the cheapest hard room an adult can build.
+  in one direction is the cheapest hard room an adult can build. Since [R-022]
+  a new brush is a row in `CHAR` reading `charFor({ cell: 'oneway', only })`,
+  not an edit in five files.
 - **done-when:** one-ways can be painted and turned, and a room built with one
   solves with the same par the solver derives.
 - **needs:** R-004 (the same check proves it is reachable at all)
@@ -62,9 +64,10 @@ hand.
 ### [R-004] Every cell kind appears in a shipped level, and a check says so
 - **what:** Test World's comment claims one room per mechanic; no shipped level
   anywhere uses a one-way. Add the missing room(s) and the check that keeps the
-  claim true. Scrape `CellKind` and `ItemKind` from the engine, walk every map
-  in `chapters`, fail on a kind nothing uses — and assert the sample was
-  non-empty, per `CLAUDE.md`.
+  claim true. The scraping half is done: `CELL_KINDS` and `ITEM_KINDS` are
+  `const` arrays since [R-022] and `legend.test.ts` already walks them, so this
+  is now "walk every map in `chapters`, fail on a kind nothing uses" — with the
+  sample-size assertion `CLAUDE.md` requires.
 - **done-when:** the check exists, it fails when a room is removed, and it
   passes.
 
@@ -84,6 +87,9 @@ hand.
   that no longer solves must drop out rather than open wrong.
 - **done-when:** a link opens somebody else's room, playable, with a par derived
   on arrival; and it works from `file://` with no network.
+- **note:** the failure path is safe as of [R-022] — `playable()` checks the map
+  is complete before touching the solver, so a mangled link drops out instead of
+  throwing out of `parseMap` into a screen with no error boundary.
 
 ### [R-007] Generation for the Scrapyard
 - **what:** `generate.ts` stops at World 2. Conveyors are where the load-bearing
@@ -192,6 +198,58 @@ hand.
   that can see, and the rest are gone.
 - **needs:** NOTES thread "regex is holding up a dozen CSS claims"
 
+### [R-023] The guards' lists come from the engine, not from a transcription
+- **what:** `smoke.fast.mjs` re-types two lists the engine already owns — the
+  nine themes, and the board kinds. The kinds list was missing `oneway` for its
+  whole life, so a bare `.oneway {}` was the one collision nothing could catch;
+  it has been added by hand, which is the same mistake with a fresh clock. The
+  `.mjs` suites cannot import TypeScript, so this wants either a small emitted
+  manifest or a vitest check that reads the suite as text and compares.
+- **done-when:** adding a kind or a theme to the engine cannot leave the guard
+  behind, and something fails if it does.
+
+### [R-024] Three guards can pass on an empty sample
+- **what:** the `@keyframes`, clip-rule and bare-kind guards each interpolate a
+  count into their label and never assert it — `no two animations share a name
+  (0 defined)` would print `ok`. That is exactly the `(0 checked)` shape
+  `CLAUDE.md` gate 3 forbids, in the file that exists to enforce it.
+- **done-when:** each of the three fails on an empty sample, proven by planting
+  it.
+
+### [R-025] `report()` does not do what the docs say it does
+- **what:** `doc/design/testing/harness.md` says "the report fails if any
+  arrived" of the uncaught-error collector. `report()` never reads `errors`; the
+  only assertion is one point-in-time check in the full suite, and the fast
+  suite does not import it at all. Either wire it in or stop claiming it.
+- **done-when:** an uncaught error fails both suites, proven by throwing one.
+
+### [R-026] `.star` and `.confetti` collide, live in the shipped build
+- **what:** collision **seven**. `.star` (sky decor) and `.confetti` are the
+  same specificity and both declare `animation`; `.star` is later in
+  `world.css`, so the one-in-three confetti particles given `class="confetti
+  star"` run `twinkle … infinite` instead of `fall`. Neither guard fires — the
+  keyframe names differ and `star` is not a board kind.
+- **done-when:** confetti falls, and a guard would catch the next one of these.
+- **needs:** R-010 is the general form; this one is a rename and need not wait
+
+### [R-027] `bits.ts` is two modules in a trench coat
+- **what:** a coin-flight animation and the entire save file share one file, and
+  the persistence half is eleven near-identical `try/catch` wrappers over five
+  keys, with three different spellings of the same comment. `loadRooms()` is
+  typed `unknown[]` and cast at the call site. This is `doc/META.md`'s own *a
+  document that needs two disciplines is two documents*, applied to code.
+- **done-when:** reading and writing a key is one helper, the save file has its
+  own module, and the types survive the boundary.
+
+### [R-028] Practice is not a `Chapter`, though everything says it is
+- **what:** `doc/MEMORY.md` claimed practice rooms and built rooms are both
+  assembled into a `Chapter` "with no special cases". Only built rooms are;
+  practice is a bare `Level` held outside the chapter system and needs a special
+  case in six places (`game.svelte.ts` ×4, `GameBar.svelte`, `Rooms.svelte`).
+  The document has been corrected — this card is making the claim true again.
+- **done-when:** practice is a chapter of one, and the six special cases are
+  gone.
+
 ### [R-021] Driven by keyboard, once, end to end
 - **what:** aria-labels and reduced-motion are in; nothing has been driven by
   keyboard or heard through a screen reader. Do it once and write down what it
@@ -203,6 +261,35 @@ hand.
 ---
 
 ## history
+
+### [R-022] One fact, written once — **closed**
+The layer that turns a map string into a playable level had been written once
+per caller. Two new engine modules: `legend.ts` (the map format as a table, read
+in both directions — it was being interpreted in five places) and `level.ts`
+(`probe` / `derive` / `trayFor` / `OPEN_TRAY` / `DRAFT_DEPTH` — the
+placeholder-solve-patch dance was written three times, each spelling the
+all-nines tray as a bare literal). Also collapsed: three gate-opening loops into
+one, six copies of the direction-vector table and three of the belt-rotation
+table into `DELTA`/`DIR_ANGLE`, four `"x,y"` key schemes into `posKey`, and
+Funke's roaming onto the engine's own `passable` — she had been padding through
+shut gates and fallen bridges.
+
+**Three name collisions were inside `src/engine/`**, where no guard looks: `at`,
+`toMap` and `Cell` each meant two things. Renamed.
+
+Two real defects fell out and were fixed with a planted fault each: `clone(Draft)`
+silently dropped a room's name and tray on every stroke, and `playable()` threw
+out of `parseMap` on an incomplete saved room rather than dropping it.
+
+Engine code is **flat** (868 → 921 lines, comments stripped) — the win is places
+a fact is written, not lines. 266 → **276** unit tests, 190 → **191** fast
+checks, **142** full checks.
+
+Two beliefs did not survive contact: a key-opened gate was never misclassified
+(`pickup` outranks `gate` in the event chain), and the legend round-trip test
+**cannot** prove the table is right — swapping `E` and `W` passes it while
+failing twenty tests elsewhere. Both are recorded in `doc/LOG.md` rather than
+quietly dropped.
 
 ### [R-000] The agentic structure, seeded from the handover — **closed**
 `CLAUDE.md` was a briefing that pointed at three documents; it is now a contract

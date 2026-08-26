@@ -73,7 +73,9 @@ every single time becomes something to skip.
 
 Checks like "the fins are pulled down past the flame overhang" assert a literal
 `bottom:-6%` in the built file. They catch deletion, not wrongness, and they are
-re-tuned by hand whenever the value is. A visual regression tool would replace
+re-tuned by hand whenever the value is. **There are 27 of them, not "about a
+dozen"** — counted rather than remembered — and the most brittle pins a rule's
+entire body and declaration order. A visual regression tool would replace
 them — but a screenshot baseline is an external dependency and a pile of binary
 artefacts in a repo whose whole point is that it works on a plane. Unresolved:
 whether the honest version is a headless-render baseline committed to the repo,

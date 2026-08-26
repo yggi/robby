@@ -31,9 +31,15 @@ without producing a single failure.
 **jsdom hides uncaught errors in its own console.** A suite can pass in full
 while the app throws on every frame.
 
-The harness collects them and exposes `errors`, and the report fails if any
-arrived. Before trusting a green run, know what the environment is allowed to
-eat silently.
+The harness collects them and exposes `errors`. **This page used to say "and the
+report fails if any arrived", and that is not true** — `report()` never reads
+`errors`. The only assertion is one point-in-time check in the full suite, and
+the fast suite does not import it at all. `doc/BOARD.md` [R-025] is wiring it in
+or dropping the claim; until then, know that this collector is read once, in one
+suite, at one moment.
+
+Before trusting a green run, know what the environment is allowed to eat
+silently — and check that the thing you believe is watching actually is.
 
 ## `sweepBoard()` / `checkBoardSizing()`
 

@@ -64,10 +64,40 @@ export function isDecision(world: World, p: Vec2, dir: Dir | null): boolean {
   return !(opps.length === 1 && opps[0] === dir)
 }
 
+/** Where cell `i` of a world is. */
+const posOf = (world: World, i: number): Vec2 => ({
+  x: i % world.w,
+  y: Math.floor(i / world.w),
+})
+
+/**
+ * Open gates, and say which tiles that changed.
+ *
+ * `link` names one gate; leaving it out opens every gate in the room, which is
+ * what a key does. This was three loops — one for the plate, one for the key,
+ * one inside the reachability flood — each with a slightly different idea of
+ * what to record, and only the third of them parameterised.
+ */
+export function openGates(world: World, link?: number): Vec2[] {
+  const opened: Vec2[] = []
+  world.cells.forEach((g, i) => {
+    if (g.kind !== 'gate' || g.open) return
+    if (link !== undefined && g.link !== link) return
+    g.open = true
+    opened.push(posOf(world, i))
+  })
+  return opened
+}
+
 /** Auto-triggers, fired on arrival. Returns the tiles that changed. */
 function onEnter(state: State, p: Vec2): { changed: Vec2[]; kind: string[] } {
   const changed: Vec2[] = []
   const kind: string[] = []
+
+  const note = (opened: Vec2[]) => {
+    changed.push(...opened)
+    if (opened.length) kind.push('gate')
+  }
 
   // pickups
   for (let i = state.items.length - 1; i >= 0; i--) {
@@ -77,31 +107,16 @@ function onEnter(state: State, p: Vec2): { changed: Vec2[]; kind: string[] } {
       state.held.push(it.kind)
       changed.push(p)
       kind.push('pickup')
-      if (it.kind === 'key') openAllGates(state, changed)
+      // a key opens everything on contact. The frame still reports itself as a
+      // pickup rather than as a gate — picking the key up is what happened, and
+      // 'pickup' is ahead of 'gate' in the priority below.
+      if (it.kind === 'key') note(openGates(state.world))
     }
   }
 
   const c = at(state.world, p)
-  if (c.kind === 'plate') {
-    for (let i = 0; i < state.world.cells.length; i++) {
-      const g = state.world.cells[i]
-      if (g.kind === 'gate' && g.link === c.link && !g.open) {
-        g.open = true
-        changed.push({ x: i % state.world.w, y: Math.floor(i / state.world.w) })
-        kind.push('gate')
-      }
-    }
-  }
+  if (c.kind === 'plate') note(openGates(state.world, c.link))
   return { changed, kind }
-}
-
-function openAllGates(state: State, changed: Vec2[]) {
-  state.world.cells.forEach((g, i) => {
-    if (g.kind === 'gate' && !g.open) {
-      g.open = true
-      changed.push({ x: i % state.world.w, y: Math.floor(i / state.world.w) })
-    }
-  })
 }
 
 function satisfied(state: State, exit: Vec2 | null, goal: Level['goal']): boolean {
@@ -146,20 +161,13 @@ function reachable(state: State, exit: Vec2 | null, goal: Level['goal']): boolea
       }
     }
 
-    let opened = false
-    const unlock = (link?: number) => {
-      for (const g of scratch.cells)
-        if (g.kind === 'gate' && !g.open && (link === undefined || g.link === link)) {
-          g.open = true
-          opened = true
-        }
-    }
+    let opened = 0
     for (const i of seen) {
       const c = scratch.cells[i]
-      if (c.kind === 'plate') unlock(c.link)
+      if (c.kind === 'plate') opened += openGates(scratch, c.link).length
     }
     for (const it of state.items)
-      if (it.kind === 'key' && seen.has(idx(it.at))) unlock()
+      if (it.kind === 'key' && seen.has(idx(it.at))) opened += openGates(scratch).length
 
     if (!opened) break
   }
