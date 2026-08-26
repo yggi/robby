@@ -176,19 +176,19 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 /* ---- a way through that is shut for good ---- */
 .thicket { position: absolute; inset: var(--in); display: grid; place-items: center; }
 .thicket-svg { width: 100%; height: 100%; }
-.tile.blocked::before {
+.tile.k-blocked::before {
   /* the path visibly continues, it is simply impassable */
   filter: brightness(.42) saturate(.5);
 }
 
 /* ---- parts ---- */
 .part { width: 100%; height: 100%; }
-.item.cog .cellwrap::before,
-.item.coil .cellwrap::before,
-.item.core .cellwrap::before { background: radial-gradient(circle, #ffffff40 0%, transparent 62%); }
-.item.cog .part { filter: drop-shadow(0 0 8px #cfd8e0aa); }
-.item.coil .part { filter: drop-shadow(0 0 9px #b07dffaa); }
-.item.core .part { filter: drop-shadow(0 0 9px #4bd98aaa); }
+.item.k-cog .cellwrap::before,
+.item.k-coil .cellwrap::before,
+.item.k-core .cellwrap::before { background: radial-gradient(circle, #ffffff40 0%, transparent 62%); }
+.item.k-cog .part { filter: drop-shadow(0 0 8px #cfd8e0aa); }
+.item.k-coil .part { filter: drop-shadow(0 0 9px #b07dffaa); }
+.item.k-core .part { filter: drop-shadow(0 0 9px #4bd98aaa); }
 .item .part { width: 46%; height: 46%; }
 
 /* ---- Robby's thought bubble ----
@@ -285,7 +285,7 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 .launchpad.short .rocket { animation: refuse 520ms 2; }
 
 /* ---- picking something up ---- */
-.pickring {
+.fx-pickring {
   position: absolute; inset: 12%; border-radius: 50%;
   border: 4px solid #ffe9c4; animation: pickring 620ms ease-out forwards;
 }

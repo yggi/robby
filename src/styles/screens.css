@@ -272,15 +272,17 @@
   width: calc(100% / var(--mw)); height: calc(100% / var(--mh));
   left: calc(var(--mx) * 100% / var(--mw)); top: calc(var(--my) * 100% / var(--mh));
 }
-.mini i.w { background: transparent; }
-.mini i.p { background: #00000024; }
-.mini i.s { background: #2b8e8a; border-radius: 50%; }
-.mini i.b { background: var(--power); border-radius: 50%; }
-.mini i.r { background: #4fd1ff; }
+/* one letter per mark, namespaced — a bare `.b {}` is a plausible thing for
+   anybody to write, and it would land here */
+.mini i.m-w { background: transparent; }
+.mini i.m-p { background: #00000024; }
+.mini i.m-s { background: #2b8e8a; border-radius: 50%; }
+.mini i.m-b { background: var(--power); border-radius: 50%; }
+.mini i.m-r { background: #4fd1ff; }
 /* machinery: belts, bridges, gates, one-ways, and the parts they guard. One
    mark for all of them on purpose — at 4px a square can say "there is
    something here", and nothing finer than that. */
-.mini i.m { background: #00000059; }
+.mini i.m-m { background: #00000059; }
 
 /* the Cheese Moon's badge: a moon, with the stuff showing in the craters */
 .e-moon { fill: #b9c0cb; }

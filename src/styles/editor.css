@@ -59,11 +59,9 @@
 .paint:active { translate: 0 3px; box-shadow: 0 1px 0 #0e1117; }
 .paint.on { box-shadow: 0 4px 0 #0e1117, inset 0 0 0 2px var(--gold); }
 .paint i { width: 24px; height: 24px; border-radius: 5px; display: block; }
-.paint.floor i { background: var(--floor); }
-.paint.wall i { background: #2b2f38; box-shadow: inset 0 0 0 2px #ffffff1f; }
-.paint.robot i { background: #eef6f7; border-radius: 50%;
-                 box-shadow: inset 0 -6px 0 #2b8e8a; }
-.paint.battery i { background: var(--power); border-radius: 4px; }
+.paint.k-floor i { background: var(--floor); }
+.paint.k-wall i { background: #2b2f38; box-shadow: inset 0 0 0 2px #ffffff1f; }
+.paint.k-battery i { background: var(--power); border-radius: 4px; }
 
 .play.save { width: 62px; height: 62px; }
 .play.save:disabled { background: #3a4048; box-shadow: 0 5px 0 #23272d; opacity: .5; }
@@ -121,8 +119,8 @@
 
 /* palette swatches: the thing itself, not an approximation of it */
 .swatch { width: 30px; height: 30px; display: grid; place-items: center; }
-.swatch.floor { border-radius: 7px; background: var(--floor); box-shadow: 0 3px 0 var(--edge); }
-.swatch.wall {
+.swatch.k-floor { border-radius: 7px; background: var(--floor); box-shadow: 0 3px 0 var(--edge); }
+.swatch.k-wall {
   border-radius: 7px; background: #20242c;
   box-shadow: inset 0 0 0 2px #ffffff1a;
 }
@@ -131,11 +129,11 @@
 .swatch.span svg { width: 100%; height: 70%; }
 .swatch.span path { stroke: var(--string, #8e9299); stroke-width: 7; fill: none;
                     stroke-linecap: round; }
-.swatch.belt {
+.swatch.k-belt {
   border-radius: 6px; background: repeating-linear-gradient(90deg, #3a342e 0 5px, #2b2622 5px 10px);
   display: flex; align-items: center; justify-content: center; gap: 3px;
 }
-.swatch.belt i { width: 4px; height: 12px; border-radius: 2px; background: #e0913f; }
+.swatch.k-belt i { width: 4px; height: 12px; border-radius: 2px; background: #e0913f; }
 
 /* a room of your own: play it, change it, or throw it away */
 .playface {

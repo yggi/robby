@@ -17,6 +17,104 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — end the collision category
+
+Cards: [R-013], [R-010] and [R-026] closed. [R-023] closed on the way past.
+[R-029] opened from what the guards found.
+
+Two cards on one branch because they meet at the particle code: every particle
+class name in the game is a string literal inside the block [R-013] moves out of
+`Board.svelte`, and one of them — `star` — was collision **seven**.
+
+**[R-013].** `Board.svelte` 582 → **449**. Two modules out:
+
+- **`src/view/particles.ts`** — `spawn`, `pickup`, `exhaust`, `puff`,
+  `celebrate`, as plain functions taking the element to hang particles on, in
+  the shape `bits.ts` and `fly.ts` already use.
+- **`src/view/roam.ts`** — `routesFrom` (the breadth-first search) and
+  `nextStroll` (which tile she picks, and the walk back out through Robby's tile
+  to get there). **Pure**, so `src/view/roam.test.ts` can exist: 11 tests, and
+  the two that matter were proven by planting the historical fault — a
+  hand-written wall-and-blocked check in place of the engine's `passable` — and
+  watching *only* the shut-gate and fallen-bridge tests go red.
+
+The clock stayed in the component: `padAlong`'s `setTimeout` cadence and the
+interval that starts a stroll are the view's job. Moving them into a
+`.svelte.ts` factory would have bought rune-ownership risk and nothing else.
+
+**`throwParty` stayed too**, and that is a decision rather than an oversight:
+`party` and `beat` are celebration *state*, read by `catPos`, `catCls` and
+`botCls`. It is a third thing in the file, but not a third module — pulling it
+out means either exporting three reactive values or moving the cat's whole
+class derivation with it.
+
+**[R-010].** `src/view/css.ts` is now the only road from a name the engine owns
+to a class in the DOM: `kindCls('belt')` → `k-belt`, `markCls('w')` → `m-w`.
+Three families were prefixed — cell and item kinds (`Board.svelte`,
+`Editor.svelte`, including the editor's brushes), the minimap's single letters
+(`.b` and `.m` were live hazards), and every particle (`fx-`). About twenty
+selectors across four stylesheets and twenty more sites in the two smoke suites.
+
+The rename failed loudly once, which is the good failure mode: a CSS-text check
+pinning `\.tile\.fragile::before` that a class-name grep does not find.
+
+**[R-026] is closed by construction rather than by patch.** `.confetti` and
+`.star` were both bare single-class rules declaring `animation`, at equal
+specificity, and `.star` — the *sky decor*, five hundred lines further down
+`world.css` — came later, so a third of the confetti ran `twinkle … infinite`
+instead of `fall`. The confetti is `fx-confetti fx-star` now and the decor's
+`.star` cannot reach it.
+
+### Three guards, and what the third of them found
+
+Each was proven by planting its fault and watching it go red. Fast suite 191 →
+**199**, full 142 → **145**.
+
+1. **No element wears a bare engine name.** Sampled on every navigation, an
+   empty sample fails. Written twice: the first version asserted *every* class
+   was prefixed and failed on `swatch batt`, which is a legitimate hand-written
+   variant. The invariant that is actually wanted is narrower — no element may
+   carry a name the *engine* owns — and it needs no allowlist, which is why it
+   is the right one.
+2. **No rule names a class nothing writes, and nothing is written with no rule.**
+3. **No element is claimed by two animations.** [R-026]'s general form. Two
+   samples: the DOM, and the multi-class strings `particles.ts` writes — because
+   confetti exists for 2.8 seconds after a win and the fast suite never gets
+   there, so the DOM half alone would have watched the original bug go past.
+
+**[R-023] fell out.** The guards' lists are read from the files that own them —
+`CELL_KINDS`/`ITEM_KINDS` from `src/engine/types.ts`, `MARKS` from `css.ts`,
+`FX_CLASSES` from `particles.ts` — by regex over the source text, since a `.mjs`
+suite can read TypeScript even though it cannot import it. The bare-kind guard's
+own transcribed list, the one that was missing `oneway` for the mechanic's whole
+life, is gone.
+
+### `.spark` has never existed
+
+Guard 2's second direction found it immediately. `pickup()` spawned eight
+`<span class="spark">`, each given a colour, a direction and an 18ms-stepped
+delay — and **no `.spark` rule has ever been written, in any commit**
+(`git log --all -S`). They were unstyled inline spans of no size: born, laid out
+to nothing, removed 900ms later, on every pickup the game has ever played.
+
+The spawn code is deleted rather than styled. Deleting is provably
+behaviour-preserving — no rule, no size, no animation, nothing on screen ever —
+whereas writing the rule would be designing a burst that changes how every
+pickup in the game feels, which is not a refactor's decision to make. [R-029]
+carries the intent.
+
+Also removed: `.paint.robot`, a palette rule for a brush `Brush` has never had.
+
+Two smaller things fixed in passing, both the same category in a different
+place: `const at = g.playhead` inside `Board.svelte`'s particle effect shadowed
+the `at` imported from `parse` (renamed `frame`), and `MiniMap`'s cell field was
+called `kind` while holding a mark rather than a kind.
+
+One behaviour change, deliberate and small: `nextStroll`'s fallback when every
+tile is stale used to index a differently-filtered list with a random number
+that was always zero, so Funke always went to the same tile and could pick the
+one she was already on. It picks properly now.
+
 ## 2026-08-26 — one fact, written once
 
 Cards: [R-022] opened and closed. [R-002], [R-004] and [R-006] got cheaper.

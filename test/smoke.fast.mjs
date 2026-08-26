@@ -1,5 +1,7 @@
 import {
-  $, $$, check, checkBoardSizing, raw, report, sweepBoard, tok, until, wait, window,
+  $, $$, CELL_KINDS, FX_CLASSES, ITEM_KINDS, MARKS, check, checkBoardSizing,
+  checkNamespacing, checkOneAnimationEach, checkPrefixedRules, raw, report,
+  sweepBoard, sweepGenerated, tok, until, wait, window,
 } from './harness.mjs'
 
 /**
@@ -16,6 +18,7 @@ async function go(click, ready) {
   // here rather than at call sites means a room added later is covered without
   // anybody remembering to cover it.
   sweepBoard()
+  sweepGenerated()
 }
 
 /**
@@ -145,7 +148,7 @@ check('the charger sits over where he wakes up',
   $$('.clutter .propcell').some((el) =>
     el.style.getPropertyValue('--x') === '1' && el.style.getPropertyValue('--y') === '0'))
 check('one walkable path, six tiles', $$('.tile').length === 6)
-check('battery present', !!$('.item.battery'))
+check('battery present', !!$('.item.k-battery'))
 check('robot starts unpowered', $('.bot')?.classList.contains('sad'))
 check('Funke came along', !!$('.cat .cat-svg'))
 check('Robby has idle tics', !!$('.bot .gaze') && !!$('.bot .fidget'))
@@ -197,7 +200,7 @@ await go(() => $('.room.practice').click(), () => !!$('.board') && !$('.rooms'))
 check('a generated clearing opens', $('.gamebar h2')?.textContent === 'Practice')
 check('in the forest, not the Lab', $('.scene')?.dataset.theme === 'forest')
 check('with more than one thing to fetch',
-  $$('.item.cog, .item.coil, .item.core').length >= 2)
+  $$('.item.k-cog, .item.k-coil, .item.k-core').length >= 2)
 check('and a passage grown over', !!$('.thicket .thicket-svg'))
 check('Robby lists them all in his bubble', $$('.think .want').length >= 2)
 await go(() => $('.gamebar .ghostbtn').click(), () => !!$('.rooms') && !$('.board'))
@@ -208,13 +211,13 @@ check('canopies are seen from above, not trunks from the side',
 await go(() => $$('.room')[1].click(), () => $('.scene')?.dataset.theme === 'forest')
 check('forest theme applied', $('.scene')?.dataset.theme === 'forest')
 check('the blocked way is drawn, not just missing', !!$('.thicket .thicket-svg'))
-check('the blocked tile is dimmed rather than removed', !!$('.tile.blocked'))
+check('the blocked tile is dimmed rather than removed', !!$('.tile.k-blocked'))
 check('no clutter outside the Lab', $$('.clutter .prop').length === 0)
 
 await go(() => $('.gamebar .ghostbtn').click(), () => !!$('.rooms') && !$('.board'))
-await go(() => $$('.room')[4].click(), () => $$('.item.cog').length === 1)
-check('three parts on the floor', $$('.item.cog, .item.coil, .item.core').length === 3)
-check('parts are distinguishable', !!$('.item.cog') && !!$('.item.coil') && !!$('.item.core'))
+await go(() => $$('.room')[4].click(), () => $$('.item.k-cog').length === 1)
+check('three parts on the floor', $$('.item.k-cog, .item.k-coil, .item.k-core').length === 3)
+check('parts are distinguishable', !!$('.item.k-cog') && !!$('.item.k-coil') && !!$('.item.k-core'))
 check('the bubble lists all three', $$('.think .want').length === 3)
 check('and still no rocket, because there is none', !$('.think .want.goal'))
 
@@ -253,7 +256,7 @@ check('the level select stands in the yard', !!$('.rooms .scrapground'))
  * the Lab because the Lab has no machinery to draw — which is the whole point.
  */
 {
-  const machinery = $$('.room .mini i.m').length
+  const machinery = $$('.room .mini i.m-m').length
   const lab = $$('.mini').length
   check(`the yard's thumbnails show its machinery (${machinery} marks over ${lab} rooms)`,
     lab > 0 && machinery > 0)
@@ -264,7 +267,7 @@ check('Grand Tour runs belts in all four directions',
   new Set($$('.beltwrap').map((b) => b.style.getPropertyValue('--spin'))).size === 4)
 check('and gives him no way to go left', !$$('.token').some((t) => t.getAttribute('aria-label') === 'left'))
 check('the battery is one step left of him, and he cannot take it',
-  $('.item.battery')?.style.getPropertyValue('--x') === '1' &&
+  $('.item.k-battery')?.style.getPropertyValue('--x') === '1' &&
   $('.bot')?.style.getPropertyValue('--x') === '2')
 
 await go(() => $('.gamebar .ghostbtn').click(), () => !!$('.rooms') && !$('.board'))
@@ -308,7 +311,7 @@ check('each is strung with four sagging strands',
   $$('.strands')[0].querySelectorAll('path').length === 4)
 // they looked like ordinary floor until the tile below stopped being painted
 check('a bridge is a gap, not a floor tile with lines on it',
-  /\.tile\.fragile::?before\{background:#00000038/.test(raw))
+  /\.tile\.k-fragile::?before\{background:#00000038/.test(raw))
 check('the strands tear rather than fade when a bridge goes',
   /@keyframes snap\{[^}]*stroke-dasharray/.test(raw))
 check('and they part one after another, not all together',
@@ -317,7 +320,7 @@ check('every strand is normalised, so one set of keyframes tears them all',
   ($('.strands')?.innerHTML.match(/pathLength="?100/g) || []).length === 4)
 check('the moon is grey, with cheese only as a highlight',
   /--floor:\s*#ccd2dc/.test(raw) && /--string:\s*#f5d24f/.test(raw))
-check('both parts are out on the moon', !!$('.item.cog') && !!$('.item.coil'))
+check('both parts are out on the moon', !!$('.item.k-cog') && !!$('.item.k-coil'))
 await go(() => $('.gamebar .ghostbtn').click(), () => !!$('.rooms') && !$('.board'))
 await go(() => $$('.room')[6].click(), () => $('.scene')?.dataset.theme === 'scrap')
 check('scrapyard theme applied', $('.scene')?.dataset.theme === 'scrap')
@@ -325,7 +328,7 @@ check('the yard is seen from above', !!$('.scrapground') && $$('.wreck').length 
 check('five belt tiles are drawn', $$('.beltwrap').length === 5)
 check('they all run the same way', new Set(
   $$('.beltwrap').map((b) => b.style.getPropertyValue('--spin'))).size === 1)
-check('the belt is walkable, so it is part of the path', $$('.tile.belt').length === 5)
+check('the belt is walkable, so it is part of the path', $$('.tile.k-belt').length === 5)
 
 // the plan should run straight through the belt, with the free stretch marked
 tok('down').click()
@@ -371,7 +374,7 @@ check('the editor gets the world\'s colours like any other screen',
 check('the editor opens on a room that already works',
   $('.verdict b')?.textContent === '1 arrow')
 check('with Robby and a battery already placed',
-  !!$('.egrid .bot') && !!$('.egrid .item.battery'))
+  !!$('.egrid .bot') && !!$('.egrid .item.k-battery'))
 check('and it can be saved straight away', $('.keep')?.disabled === false)
 check('Robby is not a brush: there is one of him and he cannot go',
   !$$('.paint').some((p) => p.getAttribute('aria-label') === 'Robby'))
@@ -401,7 +404,7 @@ check('carrying a piece past the edge offers to throw it away',
   $('.egrid')?.classList.contains('dropping'))
 eg.dispatchEvent(PE('pointerup', 400, 140))
 check('and letting go there removes it',
-  await until('the battery to go', () => $$('.egrid .item.battery').length === 0, 4000, 60))
+  await until('the battery to go', () => $$('.egrid .item.k-battery').length === 0, 4000, 60))
 
 // a conveyor turns on the spot rather than needing four buttons
 $$('.paint')[4].click()
@@ -512,14 +515,15 @@ if (unstyled.length) console.log('     no palette for:', unstyled.join(', '))
  *
  * The rule: those names must always be qualified.
  */
-// ItemKind then CellKind, transcribed from src/engine/types.ts. `oneway` was
-// missing from this list for as long as it existed, so a bare `.oneway {}` was
-// the one board kind nothing here would have caught. Deriving the list from the
-// engine rather than re-typing it is the real fix and is still open.
-const KINDS = [
-  'cog', 'coil', 'core', 'battery', 'key',
-  'exit', 'belt', 'gate', 'plate', 'blocked', 'fragile', 'floor', 'wall', 'oneway',
-]
+// The list is read out of `src/engine/types.ts` rather than re-typed here.
+// It *was* re-typed, and `oneway` was missing from it for as long as the
+// mechanic existed, so a bare `.oneway {}` was the one board kind nothing here
+// would have caught — the guard against transcription errors, containing one.
+//
+// This is now the net rather than the fix: since `src/view/css.ts`, no kind
+// reaches the DOM unprefixed, so `.cog {}` cannot land on the board even if
+// somebody writes it. It costs nothing and it still catches the writing.
+const KINDS = [...ITEM_KINDS, ...CELL_KINDS]
 const bare = KINDS.filter((k) => new RegExp(`(^|[,{}])\\.${k}[,{]`).test(raw))
 check(`board kinds are never styled bare (${KINDS.length} checked)`, bare.length === 0)
 if (bare.length) console.log('     bare rules for:', bare.join(', '))
@@ -550,6 +554,22 @@ check('the tread is a scrolling belt, not a hopping plate',
 
 // over every board this suite opened, not just whichever screen it ended on
 checkBoardSizing()
+
+/**
+ * The namespace guards. `src/view/css.ts` makes a collision impossible to
+ * write; these three make sure it stays that way — that everything generated
+ * still goes through it, that no rule names a class nothing writes and nothing
+ * is written with no rule to land on, and that no element is ever claimed by
+ * two animations at once. → `doc/design/testing/guards.md`
+ */
+checkNamespacing([...CELL_KINDS, ...ITEM_KINDS], MARKS)
+checkPrefixedRules([
+  ...CELL_KINDS.map((k) => `k-${k}`),
+  ...ITEM_KINDS.map((k) => `k-${k}`),
+  ...MARKS.map((m) => `m-${m}`),
+  ...FX_CLASSES,
+])
+checkOneAnimationEach()
 
 check('no screen is re-rendered after it has gone', inert === 0)
 

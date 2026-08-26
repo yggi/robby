@@ -129,8 +129,11 @@
   background: repeating-linear-gradient(180deg, var(--markcol) 0 32%, transparent 32% 64%); }
 
 /* ---- the rocket: the way out, when the manifest is satisfied ----
-   Named `launchpad`, not `exit`: the floor tile beneath it already carries the
-   class `exit` from its cell kind, and `.exit` matched that first. ---- */
+   Named `launchpad`, not `exit`: the floor tile beneath it already carried the
+   class `exit` from its cell kind, and `.exit` matched that first. That tile is
+   `k-exit` now — kinds reach the DOM only through `kindCls` (`src/view/css.ts`),
+   so the collision it is named after can no longer be written. The name stays;
+   it is the better one anyway. ---- */
 /* The rocket stands *on* the pad. It used to be centred in the tile with a ring
    drawn round its middle, so it read as sunk into the floor with a halo. Now
    the pad is a plate at the bottom of the tile and the rocket rests its fins on
@@ -262,7 +265,7 @@
 
 /* Exhaust: a rolling cloud out from under it. Named `plume`, not `smoke` —
    the Lab's menu badge already has a `.smoke` for its chimney. */
-.plume {
+.fx-plume {
   position: absolute; border-radius: 50%;
   background: radial-gradient(circle at 40% 36%, #ffffffe0, #cfd6de00 70%);
   animation: billow var(--t) ease-out forwards;
@@ -553,19 +556,19 @@
 
 /* ---- particles ---- */
 .fx { pointer-events: none; z-index: 5; display: grid; place-items: center; }
-.dust { position: absolute; width: 13%; height: 13%; border-radius: 50%;
+.fx-dust { position: absolute; width: 13%; height: 13%; border-radius: 50%;
         background: var(--edge); opacity: 0; animation: dust 560ms forwards; }
 @keyframes dust {
   0% { opacity: .95; transform: translate(0,0) scale(.4); }
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.5); }
 }
-.flash {
+.fx-flash {
   background: radial-gradient(circle at 50% 45%, #fff4d6cc 0%, #ffb04d33 38%, transparent 68%);
   animation: flash 800ms ease-out forwards;
 }
 @keyframes flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
 
-.shock {
+.fx-shock {
   position: absolute; width: 90%; height: 90%; border-radius: 50%;
   border: 5px solid #ffd9a8; animation: shock 900ms ease-out forwards;
 }
@@ -574,7 +577,7 @@
   100% { transform: scale(3.6); opacity: 0; border-width: 1px; }
 }
 
-.rays {
+.fx-rays {
   background: repeating-conic-gradient(from 0deg,
     #ffe6b0aa 0deg 7deg, transparent 7deg 30deg);
   -webkit-mask: radial-gradient(circle, transparent 26%, #000 34%, #000 62%, transparent 76%);
@@ -589,12 +592,12 @@
    One lived here and put a coloured dot on Robby's face: `.fx` sits at z-index
    5, above the bot's 4, and the burst radius was only 46px on a 66px tile, so
    even starting the particles part-way out left them inside his silhouette.
-   Anything anchored to his tile must be a ring or a masked shape — see .shock
-   and .rays, both of which are hollow in the middle. */
+   Anything anchored to his tile must be a ring or a masked shape — see .fx-shock
+   and .fx-rays, both of which are hollow in the middle. */
 
-.confetti { position: absolute; width: 8px; height: 13px; border-radius: 2px;
+.fx-confetti { position: absolute; width: 8px; height: 13px; border-radius: 2px;
             animation: fall var(--t) ease-in forwards; }
-.confetti.star {
+.fx-confetti.fx-star {
   width: 13px; height: 13px; border-radius: 0;
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
@@ -792,11 +795,11 @@
    The tile paints no floor at all. Drawing the walkway underneath made a bridge
    read as ordinary ground with lines painted on it; what is wanted is the drop,
    with something strung across. */
-.tile.fragile::before {
+.tile.k-fragile::before {
   background: #00000038;
   box-shadow: inset 0 3px 7px #00000059;
 }
-.tile.fragile.willfall::before, .tile.fragile.gone::before { background: #00000047; }
+.tile.k-fragile.willfall::before, .tile.k-fragile.gone::before { background: #00000047; }
 
 .strands {
   position: absolute; inset: var(--in);

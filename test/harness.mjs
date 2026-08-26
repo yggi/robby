@@ -171,6 +171,148 @@ export function checkBoardSizing() {
   if (unsized.length) console.log('     unsized:', unsized.map((e) => e.className).join(', '))
 }
 
+/**
+ * ---- the namespace guards ----
+ *
+ * Name collisions are this codebase's recurring failure mode, seven of them,
+ * and the two guards in `smoke.fast.mjs` both fire *after* the mistake. The fix
+ * is `src/view/css.ts`: a cell kind, an item kind or a minimap mark reaches the
+ * DOM only through `kindCls`/`markCls`, so it arrives as `k-belt` or `m-w` and
+ * a hand-written `.belt {}` can no longer land on it.
+ *
+ * That only holds while everything generated actually goes through them, which
+ * is what these check — sampled all through the run, like the sizing guard
+ * above and for the same reason.
+ */
+/**
+ * The names these guards check against, read out of the files that own them.
+ *
+ * Not transcribed. `smoke.fast.mjs` re-types the board-kind list by hand and
+ * `oneway` was missing from it for the feature's whole life, which made a bare
+ * `.oneway {}` the one collision nothing could catch. A `.mjs` suite cannot
+ * import TypeScript, but it can read it, and a regex over a `const` array is
+ * enough to make adding a kind to the engine unable to leave the guard behind.
+ */
+function namesIn(file, constName) {
+  const src = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const list = src.match(new RegExp(`${constName}\\s*=\\s*\\[([\\s\\S]*?)\\]`))
+  if (!list) throw new Error(`${constName} not found in ${file} — the guard is reading nothing`)
+  return [...list[1].matchAll(/'([\w-]+)'/g)].map((m) => m[1])
+}
+
+export const CELL_KINDS = namesIn('src/engine/types.ts', 'CELL_KINDS')
+export const ITEM_KINDS = namesIn('src/engine/types.ts', 'ITEM_KINDS')
+export const MARKS = namesIn('src/view/css.ts', 'MARKS')
+export const FX_CLASSES = namesIn('src/view/particles.ts', 'FX_CLASSES')
+
+const generatedSeen = new Map()
+
+/** Record every element whose class comes from data. Safe with nothing up. */
+export function sweepGenerated() {
+  const sel = '.board .tile, .board .item, .egrid .tile, .egrid .item, .mini i, .paint, .swatch'
+  for (const el of $$(sel)) generatedSeen.set(el.className, el)
+  return generatedSeen.size
+}
+
+/**
+ * Nothing generated reaches the DOM unprefixed, and no prefixed class is one
+ * the engine does not own.
+ *
+ * `kinds` and `marks` are the real lists, passed in from the suite because a
+ * `.mjs` file cannot import TypeScript. Transcribing them here is what left
+ * `oneway` out of the bare-kind guard for its whole life, so the suite gets
+ * them from the built bundle instead.
+ */
+export function checkNamespacing(kinds, marks) {
+  sweepGenerated()
+  // The invariant, stated exactly: no element wears a name the engine owns.
+  // Not "every class is prefixed" — a swatch is legitimately `swatch batt`,
+  // and `batt` is nobody's kind. What must never appear is a *bare* `blocked`,
+  // `cog` or `w`, because those are the names a stylesheet elsewhere might
+  // reasonably use for something else.
+  const owned = new Set([...kinds, ...marks])
+  const seen = [...generatedSeen.values()]
+  const stray = seen.filter((el) => [...el.classList].some((c) => owned.has(c)))
+
+  check(`generated classes were sampled at all (${seen.length} kinds)`, seen.length > 0)
+  check(`no element wears a bare engine name (${seen.length} checked)`, stray.length === 0)
+  if (stray.length) console.log('     unprefixed:', stray.map((e) => e.className).join(' | '))
+}
+
+/**
+ * Every namespaced class in the stylesheet names something that still exists,
+ * and — the half that matters more — every class the code writes has somewhere
+ * to land.
+ *
+ * The second direction found `.spark`: the pickup burst spawned eight of them
+ * with a colour, a direction and a delay, and **no `.spark` rule had ever been
+ * written**, in any commit. They were unstyled inline spans of no size, born
+ * and removed 900ms later, on every pickup the game has ever played.
+ */
+export function checkPrefixedRules(declared) {
+  const ruled = new Set()
+  for (const m of raw.matchAll(/\.((?:k|m|fx)-[\w-]+)/g)) ruled.add(m[1])
+  const owned = new Set(declared)
+  // `fx` itself is the namespace root and carries no dash
+  owned.add('fx')
+
+  const stale = [...ruled].filter((c) => !owned.has(c))
+  // a class the code writes that no rule anywhere mentions
+  const homeless = [...owned].filter((c) => c !== 'fx' && !ruled.has(c) && raw.includes(`"${c}`))
+
+  check(`namespaced rules were found at all (${ruled.size} classes)`, ruled.size > 10)
+  check(`no rule names a class nothing writes (${ruled.size} checked)`, stale.length === 0)
+  if (stale.length) console.log('     no such class:', stale.join(', '))
+  check(`nothing is spawned with nowhere to land (${owned.size} checked)`, homeless.length === 0)
+  if (homeless.length) console.log('     no rule for:', homeless.join(', '))
+}
+
+/**
+ * Collision seven, as a rule rather than as a patch.
+ *
+ * `.confetti` and `.star` were both single-class selectors declaring
+ * `animation`, at identical specificity, and `.star` — the sky decor, five
+ * hundred lines further down `world.css` — came later. So the third of the
+ * confetti given `class="confetti star"` ran `twinkle … infinite` in place
+ * instead of `fall`, in the shipped build. Neither existing guard could see it:
+ * the keyframe names differ, and `star` is not a board kind.
+ *
+ * The general form is what is checked: no element may carry two classes that
+ * each have a bare single-class rule declaring an animation, because which one
+ * wins is then decided by source order rather than by anybody's intent.
+ */
+export function checkOneAnimationEach() {
+  sweepGenerated()
+  sweepBoard()
+  const animated = new Set()
+  for (const m of raw.matchAll(/(^|[,{}])((?:\.[\w-]+)+)\{([^{}]*)\}/g)) {
+    if (!/(^|;)animation:/.test(m[3])) continue
+    const classes = m[2].match(/\.[\w-]+/g) ?? []
+    if (classes.length === 1) animated.add(classes[0].slice(1))
+  }
+
+  /*
+   * Two samples, because neither alone is enough.
+   *
+   * The DOM half sees whatever is on screen — but particles are throwaway and
+   * exist only mid-celebration, so the fast suite never has one up. The source
+   * half reads the multi-class strings `particles.ts` writes, which is where
+   * `'confetti star'` lived: a combination that only ever exists for 2.8
+   * seconds after a win, and was wrong for months.
+   */
+  const onScreen = [...generatedSeen.values(), ...boardSeen.values(), ...$$('.fx *')]
+    .map((el) => [...el.classList])
+  const written = [...readFileSync('src/view/particles.ts', 'utf8')
+    .matchAll(/'([\w-]+(?: [\w-]+)+)'/g)].map((m) => m[1].split(' '))
+
+  const groups = [...onScreen, ...written]
+  const doubled = groups.filter((cs) => cs.filter((c) => animated.has(c)).length > 1)
+  check(`animating rules were found at all (${animated.size} bare rules)`, animated.size > 5)
+  check(`class combinations were found at all (${written.length} written)`, written.length > 0)
+  check(`no element is claimed by two animations (${groups.length} checked)`, doubled.length === 0)
+  if (doubled.length) console.log('     claimed twice:', doubled.map((cs) => cs.join('.')).join(' | '))
+}
+
 /** Print the tally and exit. Called by whichever suite imported the harness. */
 export function report(label) {
   clearTimeout(watchdog)
@@ -183,6 +325,7 @@ export function report(label) {
 }
 
 export { raw, window, $, $$, wait, until, check, tok, D, NAV, dom, errors }
+
 
 
 const D = { step: 380, pickup: 760, win: 2600, bonk: 980, ret: 820, dash: 760 }

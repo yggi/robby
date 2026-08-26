@@ -18,18 +18,25 @@ src/
     editor.ts      the editor's model: drafts, painting, the verdict
   view/            Svelte + DOM. Owns time, easing, sound, everything visible
     game.svelte.ts the single state store; screens, run playback, camera, economy
-    Board.svelte   the world: tiles, sprites, particles, the plan
+    Board.svelte   the world: tiles, sprites, the plan, the camera
     Console.svelte  GameBar  Menu  Rooms  Store  Editor  Intro  MiniMap
-    audio  bits  colors  decor  fly  geom  icons  parts  props
+    audio  bits  colors  css  decor  fly  geom  icons  parts  particles
+    props  roam
   styles/          eight stylesheets, imported in a fixed order
 test/              the jsdom harness and the two smoke suites (.mjs)
 ```
 
-Note that last line of `view/`: **nine plain `.ts` modules, about 1,200 lines**
-— roughly a third of the view, and the part that gets elided whenever the
-architecture is described in prose. `decor.ts` alone is 303 lines. If you are
-looking for where something visual is defined and it is not in a component, it
-is in one of those nine.
+Note those last two lines of `view/`: **twelve plain `.ts` modules, about 1,450
+lines** — roughly a third of the view, and the part that gets elided whenever
+the architecture is described in prose. `decor.ts` alone is 303 lines. If you
+are looking for where something visual is defined and it is not in a component,
+it is in one of those twelve.
+
+Three of them are worth knowing by name: `css.ts` is the only road from a name
+the engine owns to a class in the DOM (`doc/design/code/conventions.md`);
+`particles.ts` holds every burst the board throws; and `roam.ts` is where Funke
+can get to and where she goes next — **pure**, and therefore the only part of
+her behaviour with unit tests.
 
 ## The `Trace` is the boundary
 
@@ -88,10 +95,10 @@ half that was built as a `Chapter` needed none of them.
 
 ## Where it is thin
 
-`Board.svelte` is **584 lines** and does five jobs: derivation, drag-free
-rendering, particles, the camera, and Funke's roaming AI. Two of them come out
-cleanly — the particle code is imperative DOM and wants to be a module, and
-Funke's breadth-first roaming is self-contained. `doc/BOARD.md` [R-013].
+`Board.svelte` is **449 lines**, down from 584: particles and Funke's roaming
+are modules ([R-013], closed). What is left is derivation, rendering, the camera,
+and the celebration state that three of the component's own derivations read —
+`party` and `beat`, which stayed on purpose rather than by omission.
 
 There is **no error boundary**. If a render throws, the screen goes blank — on a
 phone, with no console, in front of a child. `doc/BOARD.md` [R-014].
