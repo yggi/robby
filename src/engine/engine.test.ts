@@ -233,6 +233,34 @@ describe('the rocket checks its manifest', () => {
     expect(goal.type).toBe('exit')
     expect(goal.type === 'exit' && goal.requires).toEqual(['battery'])
   })
+
+  /**
+   * Arriving short is not a failure and never was — he drives across the pad,
+   * and several shipped routes depend on it. But it is *something*, and until
+   * the trace said so the view had to guess from where he was standing, on a
+   * frame 380ms long that cut the rocket's shudder off in the middle of it.
+   */
+  it('says so in the frame when he arrives without the manifest', () => {
+    const t = simulate(rocket(), ['down'])
+    const pad = t.frames.filter((f) => f.event === 'denied')
+    expect(pad.length).toBe(1)
+    expect(pad[0].state.held).toEqual([])
+  })
+
+  it('and does not, once he is carrying what it asked for', () => {
+    const t = simulate(rocket(), ['right', 'down', 'left'])
+    expect(t.frames.some((f) => f.event === 'denied')).toBe(false)
+    expect(t.outcome).toBe('win')
+  })
+
+  /**
+   * The beat is a frame label, not a rule. Nothing about which programs win may
+   * move — this asserts it on the run that visits the pad twice.
+   */
+  it('is a beat and not a rule: the same programs still win', () => {
+    expect(simulate(rocket(), ['down']).outcome).not.toBe('win')
+    expect(simulate(rocket(), ['right', 'down', 'left']).consumed).toBe(3)
+  })
 })
 
 describe('determinism', () => {

@@ -12,6 +12,10 @@
 .editor .roomsbar, .editor .canvas, .editor .verdict,
 .editor .tools, .editor .themepick { position: relative; z-index: 2; }
 .editor .roomsbar { margin: 0; }
+/* The tray, the tools and the themes are one thing — a rail — and in portrait
+   that rail is exactly the rows they were already in. `display: contents` is
+   what lets landscape move all three at once without portrait noticing. */
+.erail { display: contents; }
 
 .canvas { display: grid; place-items: center; min-height: 0; }
 /* `egrid`, not `grid`: the level select already owns `.grid` for its tile
@@ -40,13 +44,37 @@
 
 
 
-.verdict {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 30px; font-size: 15px; color: var(--chalk); opacity: .75;
+/* ---- the verdict, in Robby's own thought bubble ----
+   It used to be a sentence under the grid: "needs robot and battery", "Robby
+   can't get there". Words, in the one game whose entire brief is that the
+   player cannot read them. The bubble is the one he already thinks in while a
+   room is being played, so an unfinished room is him wanting something — which
+   is a thing he has always known how to say. Only the par stays a number, and
+   that is for the adult reading over a shoulder. */
+.egrid .think { pointer-events: none; }
+/* the answer, once there is one: an arrow and how many of them */
+.egrid .think.good { background: #eaf7ef; }
+.want.lit { filter: none; opacity: 1; }
+.want.lit svg { fill: var(--go); }
+.par {
+  font-size: calc(var(--c) * .42); font-weight: 800; line-height: 1;
+  color: #1f6b4a; padding: 0 calc(var(--c) * .04);
 }
-.verdict.good { color: var(--go); opacity: 1; }
-.verdict .dots { letter-spacing: 3px; opacity: .6; }
-.verdict .gearspin { width: 20px; height: 20px; border-width: 5px; }
+/* he is standing on something that is not floor: what he wants is ground */
+.want.ground {
+  border-radius: 22%; background: var(--floor);
+  box-shadow: inset 0 0 0 2px #00000024, 0 2px 0 var(--edge);
+  filter: none; opacity: .9;
+}
+/* there is a way in principle and he cannot find one inside the depth we
+   search — the same `?` he wears when a program runs out under him */
+.want.lost {
+  font-size: calc(var(--c) * .4); font-weight: 800; line-height: 1;
+  color: #b8543f; filter: none; opacity: 1;
+}
+.egrid .gearspin { width: calc(var(--c) * .46); height: calc(var(--c) * .46); }
+.egrid .gearspin i { width: 100%; height: 32%; background: #6f7683; }
+.egrid .gearspin::after { inset: 22%; background: #f6f2e8; box-shadow: 0 0 0 3px #6f7683; }
 
 .tools { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .paints { display: flex; gap: 8px; }
@@ -105,11 +133,16 @@
   box-shadow: inset 0 0 0 1px #ffffff14;
 }
 .hint.filled::before { box-shadow: none; }
-.egrid .over.lifted { opacity: .35; }
-.egrid .over.target::after {
-  content: ''; position: absolute; inset: 2px; border-radius: 8px;
-  box-shadow: inset 0 0 0 3px var(--gold);
+/* ---- a thing that has been picked up ----
+   It rides under the finger rather than staying where it was: the piece itself
+   moves, cell by cell, because the draft being rendered mid-gesture is the
+   draft the release will produce. Dragging Robby used to move nothing at all —
+   the tile under him dimmed and he stayed put. */
+.egrid .carried {
+  z-index: 8; scale: 1.18;
+  filter: drop-shadow(0 calc(var(--c) * .12) calc(var(--c) * .1) #00000073);
 }
+.egrid .carried .think { display: none; }
 .routedot {
   position: absolute; width: 24%; height: 24%; border-radius: 50%;
   background: var(--go); opacity: .8;

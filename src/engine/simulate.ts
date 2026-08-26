@@ -119,6 +119,19 @@ function onEnter(state: State, p: Vec2): { changed: Vec2[]; kind: string[] } {
   return { changed, kind }
 }
 
+/**
+ * Standing on the pad without everything the rocket asks for.
+ *
+ * This changes no outcome — `satisfied()` below is still the only thing that
+ * finishes a level, and driving across a pad you cannot use is a route several
+ * shipped levels depend on. What it changes is the *frame*: arriving short is
+ * worth a beat, and saying so here is what lets the view hold it.
+ */
+export function shortHanded(state: State, exit: Vec2 | null, goal: Level['goal']): boolean {
+  if (goal.type !== 'exit' || !exit || !eq(state.pos, exit)) return false
+  return !goal.requires.every((need) => state.held.includes(need))
+}
+
 function satisfied(state: State, exit: Vec2 | null, goal: Level['goal']): boolean {
   // Collect finishes the instant the last objective leaves the floor, whatever
   // order they were picked up in.
@@ -270,11 +283,13 @@ export function simulate(level: Level, program: Dir[]): Trace {
       ? 'pickup'
       : trig.kind.includes('gate')
         ? 'gate'
-        : changed.length
-          ? 'collapse'
-          : carried
-            ? 'carry'
-            : 'step'
+        : shortHanded(state, exit, level.goal)
+          ? 'denied'
+          : changed.length
+            ? 'collapse'
+            : carried
+              ? 'carry'
+              : 'step'
     push(from, to, event, changed, carried)
 
     if (satisfied(state, exit, level.goal)) {

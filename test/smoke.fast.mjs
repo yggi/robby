@@ -372,7 +372,9 @@ await go(() => $('.room.build').click(), () => !!$('.editor') && !$('.rooms'))
 check('the editor gets the world\'s colours like any other screen',
   /\[data-theme="lab"\]\{--bg/.test(raw) || /\[data-theme=lab\]\{--bg/.test(raw))
 check('the editor opens on a room that already works',
-  $('.verdict b')?.textContent === '1 arrow')
+  $('.egrid .think .par')?.textContent === '1')
+check('and says so in Robby\'s own thought bubble, not in a sentence',
+  !$('.editor .verdict') && !/needs \{|can't get there/.test(raw))
 check('with Robby and a battery already placed',
   !!$('.egrid .bot') && !!$('.egrid .item.k-battery'))
 check('and it can be saved straight away', $('.keep')?.disabled === false)
@@ -386,7 +388,7 @@ check('the hero plays the room being built', $('.editor .play')?.getAttribute('a
 check('and saving is the smaller act beside it', !!$('.keep'))
 check('the palette offers the world\'s pieces',
   $$('.paint').map((p) => p.getAttribute('aria-label')).join() ===
-    'Floor,Wall,Battery,Bridge,Conveyor')
+    'Floor,Wall,Battery,Bridge,Conveyor right')
 check('drawn with the board\'s own tiles, not a set of its own',
   $$('.egrid .tile').length === 7 && !!$('.elayer.floors'))
 check('the grid refuses to pan under a finger', /\.egrid\{[^}]*touch-action:none/.test(raw))
@@ -395,9 +397,72 @@ const eg = $('.egrid')
 eg.setPointerCapture = () => {}
 eg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 360, height: 280 })
 const at = (x, y) => [x * 40 + 20, y * 40 + 20]
+/** press and hold, which is what picks a thing up */
+const hold = async (x, y) => {
+  eg.dispatchEvent(PE('pointerdown', ...at(x, y)))
+  await wait(340)
+}
+
+// ---- the gesture grammar: hold to carry, tap to paint, leave the tile to draw
+//
+// Four gestures and one rule between them: the tool decides whether a tap is a
+// paint or a turn, and only a *hold* picks a thing up.
+const tiles = () => $$('.egrid .tile').length
+const tap = async (x, y) => {
+  eg.dispatchEvent(PE('pointerdown', ...at(x, y)))
+  eg.dispatchEvent(PE('pointerup', ...at(x, y)))
+  await wait(400)
+}
+
+// a tap paints, even on a thing — the brush wins wherever it is not the brush
+// that made what is under the finger
+$$('.paint')[1].click() // wall
+await tap(7, 3)
+check('a tap paints over a thing the chosen tool did not make',
+  $$('.egrid .item.k-battery').length === 0)
+check('and the room says it has nothing to fetch, wordlessly',
+  await until('the bubble', () => !!$('.egrid .think .want') && !$('.egrid .think .par'), 4000, 60))
+
+// leaving the pressed tile draws a trail from it
+$$('.paint')[0].click() // floor
+const before = tiles()
+eg.dispatchEvent(PE('pointerdown', ...at(4, 1)))
+eg.dispatchEvent(PE('pointermove', ...at(5, 1)))
+eg.dispatchEvent(PE('pointermove', ...at(6, 1)))
+eg.dispatchEvent(PE('pointerup', ...at(6, 1)))
+await wait(400)
+check('and leaving the tile it started on draws a trail, the first tile included',
+  tiles() === before + 3)
+
+// the outer ring is ground like any other: it used to be an inert border, and
+// nothing on screen said so
+await tap(0, 0)
+check('and the outermost ring paints too, where it used to be an inert border',
+  tiles() === before + 4)
+$('.roomsbar [aria-label="undo"]').click()
+await wait(400)
+
+// put the battery back with the object tool, which is what it is now
+$$('.paint')[2].click()
+await tap(7, 3)
+check('the object tool puts one back', $$('.egrid .item.k-battery').length === 1)
+check('and the answer comes back with it',
+  await until('an answer', () => $('.egrid .think .par')?.textContent === '1', 5000, 60))
+
+// the floor under Robby is floor: paint it and he is standing on a wall
+$$('.paint')[1].click() // wall
+await tap(1, 3)
+check('the floor under Robby paints like any other floor', !!$('.egrid .bot'))
+check('and the bubble says he is not standing on anything',
+  await until('the ground mark', () => !!$('.egrid .think .want.ground'), 4000, 60))
+$('.roomsbar [aria-label="undo"]').click()
+await wait(400)
 
 // carried off the edge of the room and let go: gone
-eg.dispatchEvent(PE('pointerdown', ...at(7, 3)))
+$$('.paint')[2].click() // the object tool, so the battery is the tool's own
+await hold(7, 3)
+check('holding a thing picks it up, and it rides under the finger',
+  !!$('.egrid .item.k-battery.carried'))
 eg.dispatchEvent(PE('pointermove', 400, 140))
 await wait(80)
 check('carrying a piece past the edge offers to throw it away',
@@ -406,24 +471,47 @@ eg.dispatchEvent(PE('pointerup', 400, 140))
 check('and letting go there removes it',
   await until('the battery to go', () => $$('.egrid .item.k-battery').length === 0, 4000, 60))
 
-// a conveyor turns on the spot rather than needing four buttons
+// a conveyor turns on the spot — but only under the tool that made it
 $$('.paint')[4].click()
-eg.dispatchEvent(PE('pointerdown', ...at(5, 3)))
-eg.dispatchEvent(PE('pointerup', ...at(5, 3)))
-await wait(400)
+await tap(5, 3)
 const spin = () => $('.egrid .beltwrap')?.style.getPropertyValue('--spin')
 check('conveyors can be painted', spin() === '0deg')
-eg.dispatchEvent(PE('pointerdown', ...at(5, 3)))
-eg.dispatchEvent(PE('pointerup', ...at(5, 3)))
-await wait(400)
+await tap(5, 3)
 check('and tapping one turns it', spin() === '90deg')
+$$('.paint')[0].click() // floor
+await tap(5, 3)
+check('but under any other tool a tap paints over it instead of turning it',
+  !$('.egrid .beltwrap'))
 
-// put the battery back and save
+// a tool tile that is already chosen cycles what it lays down
+$$('.paint')[4].click()
+check('the conveyor tool starts pointing the way it paints',
+  $$('.paint')[4].getAttribute('aria-label') === 'Conveyor right')
+$$('.paint')[4].click()
+await wait(80)
+check('and tapping it again turns it, so a belt is aimed before it is painted',
+  $$('.paint')[4].getAttribute('aria-label') === 'Conveyor down')
 $$('.paint')[2].click()
-eg.dispatchEvent(PE('pointerdown', ...at(7, 3)))
-eg.dispatchEvent(PE('pointerup', ...at(7, 3)))
+$$('.paint')[2].click()
+await wait(80)
+check('the object tool walks the parts the same way',
+  $$('.paint')[2].getAttribute('aria-label') === 'Cog')
+for (let i = 0; i < 3; i++) $$('.paint')[2].click()
+await wait(80)
+check('and out to the rocket, which is how a built room asks for an errand',
+  $$('.paint')[2].getAttribute('aria-label') === 'Rocket')
+await tap(4, 3)
+check('so a rocket can be placed in a room a child built', !!$('.egrid .launchpad'))
+$('.roomsbar [aria-label="undo"]').click()
+await wait(400)
+
+// round the ring to the battery again, put it back, and save
+$$('.paint')[2].click()
+await wait(80)
+check('and round again to the battery', $$('.paint')[2].getAttribute('aria-label') === 'Battery')
+await tap(7, 3)
 check('the solver answers as you build',
-  await until('an answer', () => /arrow/.test($('.verdict b')?.textContent ?? ''), 5000, 60))
+  await until('an answer', () => !!$('.egrid .think .par'), 5000, 60))
 check('and draws the answer on the room', $$('.routedot').length > 0)
 
 $('.keep').click()

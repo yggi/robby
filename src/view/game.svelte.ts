@@ -1,6 +1,6 @@
 import { initialState, simulate } from '../engine/simulate'
 import { chapters } from '../engine/levels'
-import { playable, type Draft, type SavedRoom } from '../engine/editor'
+import { draftFrom, playable, type Draft, type SavedRoom } from '../engine/editor'
 import { canGenerate, generateFor } from '../engine/generate'
 import { around, spend, type Chapter, type Dir, type FrameEvent, type Level } from '../engine/types'
 import { sfx } from './audio'
@@ -16,7 +16,10 @@ export const DUR: Record<FrameEvent, number> = {
   // changes in his favour, and the bubble ticking over is worth watching.
   // Carry is quicker than a step: he is not walking, he is being whisked along,
   // and the speed is what makes the belt feel like a free ride.
-  step: 380, carry: 210, pickup: 1150, gate: 520, collapse: 480,
+  // Denied is the rocket turning him away: long enough for one full shudder of
+  // `.think.short` / `.launchpad.short`, which used to be cut off mid-shake
+  // because arriving short was an ordinary 380ms step.
+  step: 380, carry: 210, pickup: 1150, gate: 520, collapse: 480, denied: 900,
   bonk: 980, shrug: 1000, stranded: 1200, win: 2600,
 }
 
@@ -116,7 +119,9 @@ export function createGame() {
     const room = rooms.find((r) => r.id === id)
     if (!room) return
     editingId = id
-    editDraft = { theme: room.theme, name: room.name, cells: room.map.map((r) => r.split('')) }
+    // through `draftFrom`, which lifts Robby out of the characters — and which
+    // brings the room's tray with it. Written out by hand here, it did not.
+    editDraft = draftFrom(room.map, { theme: room.theme, name: room.name, tray: room.tray })
     goTo('editor')
   }
 

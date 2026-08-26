@@ -187,6 +187,14 @@ export type FrameEvent =
   | 'pickup'
   | 'gate' // a gate opened
   | 'collapse'
+  /**
+   * Arrived at the rocket without everything its manifest asks for. Nothing
+   * about the run changes — he drives across the pad as he always has — but the
+   * refusal is a *beat*, and a beat belongs to the frame rather than to the
+   * view's guesswork. `DUR` holds it long enough for the rocket's shudder to
+   * finish; before this the animation was cut off by the next step, 380ms later.
+   */
+  | 'denied'
   | 'bonk' // instruction pointed at a wall
   | 'shrug' // decision tile, program exhausted
   | 'stranded' // objectives no longer reachable
