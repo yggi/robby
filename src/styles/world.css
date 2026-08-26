@@ -89,11 +89,22 @@
 
 /* Anything that lives at a board coordinate is exactly one tile and is placed
    by --x/--y. Adding a new board element means adding it here — miss it, and it
-   becomes an unpositioned block sized against the whole board. */
+   becomes an unpositioned block sized against the whole board.
+
+   **A percentage, not `* var(--c)`.** Every element here is exactly one tile
+   square, so `100%` of its own box *is* `--c` and it lands in the same place —
+   but the computed value is `600% 100%` rather than `246px 41px`, and that does
+   not change when the tile size does. It matters because `.bot` and `.cat` are
+   the only board elements that *transition* `translate`: written in pixels, a
+   resize changed their translate like any other move, so the room snapped to
+   the new tile size while Robby animated to it — he appeared to teleport one or
+   two tiles and slide back over the next tenth of a second. Measured at 1.39
+   tiles adrift on a 45px→35px change, mid-step. In percentages a resize is not
+   a move, so there is nothing to animate. */
 .tile, .over, .item, .bot, .launchpad, .propcell, .fx {
   position: absolute;
   width: var(--c); height: var(--c);
-  translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c));
+  translate: calc(var(--x) * 100%) calc(var(--y) * 100%);
 }
 .tile::before {
   content: ''; position: absolute;
@@ -309,7 +320,7 @@
   width: var(--c); height: var(--c);
   /* a little down and to the side, so she reads as trailing him rather than
      standing in the same spot when they share a tile */
-  translate: calc((var(--x) + .17) * var(--c)) calc((var(--y) + .21) * var(--c));
+  translate: calc((var(--x) + .17) * 100%) calc((var(--y) + .21) * 100%);
   transition: translate var(--catstep, 380ms) cubic-bezier(.3,.8,.4,1) 90ms;
 }
 /* On a win she stays her own size and stays behind him. They bounce in
@@ -394,7 +405,7 @@
    that direction's colour. Dots made every tile look equally expensive. */
 .plans { z-index: 2; pointer-events: none; }
 .vec { position: absolute; width: var(--c); height: var(--c);
-       translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c)); }
+       translate: calc(var(--x) * 100%) calc(var(--y) * 100%); }
 .seg {
   position: absolute; left: 50%; top: 50%;
   width: 100%; height: 17%;

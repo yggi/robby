@@ -17,6 +17,52 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — Robby was not teleporting; the room was resizing under him
+
+Reported: *sometimes Robby jumps back and forward in his path, teleporting one
+or two tiles back.* Fixed, and the hunt is the interesting part.
+
+**It did not reproduce.** Every shipped room — all 41 — driven at its own par in
+Chromium with the rendered position sampled at 16ms, plus wrong programs (so the
+bonk, the shrug and the walk home), plus reduced motion, plus replay,
+stop-mid-run and the endless room. Zero reversals, zero teleports, tile size
+stable throughout. The trace cannot go backwards either: every frame's
+`state.pos` is its own `to`, and consecutive `to`s differ by at most one tile.
+
+**What every one of those runs had in common was a viewport that never moved.**
+Robby and Funke are the only board elements that transition `translate`, and the
+position was written `calc(var(--x) * var(--c))` — *pixels*. So when `--c`
+changed, every tile jumped to the new size instantly and the two of them
+**animated** to it, because in pixels a resize is indistinguishable from a move.
+Resizing mid-step, measured with the same instrument:
+
+```
+944ms  model (6,1)  drawn (5.82, 1.00)  tile 45px   normal mid-step lag
+964ms  model (6,1)  drawn (7.57, 1.29)  tile 35px   1.60 tiles adrift
+        ... slides back over the next ~130ms
+```
+
+That is the report exactly. On a phone it needs no deliberate resize: the address
+bar hiding is one, and so is a rotation.
+
+**The fix is one word in one shared rule.** Every element in that rule is exactly
+one tile square, so `calc(var(--x) * 100%)` is the same position — but the
+computed value is `600% 100%`, which does not change when the tile size does. A
+resize stops being a move, so there is nothing to animate; measured after: never
+more than the 1.00-tile lag that *is* the animation. Four rules changed
+(`.tile/.over/.item/.bot/.launchpad/.propcell/.fx`, `.cat` with her trailing
+offsets, `.vec`, the editor's `.hint`), and every element verified to land on its
+model coordinate afterwards, Funke still at her deliberate +0.17/+0.21.
+
+A smoke check now scrapes every placement rule, asserts there are four, and fails
+if any is in pixels — planted and watched to fail.
+
+**Not a regression from the container-query work**, though it was reached through
+it: `--c` came off `100dvh` before, which the address bar changes just as
+readily. Older than this branch.
+
+228 fast checks (was 226), 302 unit, 145 full.
+
 ## 2026-08-26 — open up the editor, and make landscape an orientation
 
 Cards: [R-003] closed. [R-005] half-answered and rewritten. [R-030] and [R-031]

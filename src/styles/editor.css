@@ -173,7 +173,8 @@
 .elayer.floors { filter: drop-shadow(0 4px 0 var(--edge)) drop-shadow(0 8px 12px #00000047); }
 .hint {
   position: absolute; width: var(--c); height: var(--c);
-  translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c));
+  /* a percentage of its own tile, like every board element — see world.css */
+  translate: calc(var(--x) * 100%) calc(var(--y) * 100%);
 }
 .hint::before {
   content: ''; position: absolute; inset: 3px; border-radius: 6px;

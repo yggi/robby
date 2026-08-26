@@ -84,6 +84,17 @@ was applied *on top of* the work it was testing, so the only clean version in
 the tree was the one from before the work. **A one-file revert is only an undo
 if the file was clean when you planted.**
 
+**The bug lives in the dimension the harness holds still.**
+A reported glitch — Robby teleporting a tile or two and sliding back — survived
+a sweep of all 41 shipped rooms driven at their par, plus wrong programs, plus
+reduced motion, plus replay, stop-mid-run and the endless room. Every one of
+those runs was clean, because every one of them ran at a fixed viewport, and the
+fault was in *resizing*: the position was in pixels and only the robot
+transitioned it, so a tile-size change was indistinguishable from a move.
+Measured at 1.6 tiles adrift the moment the window changed. **List what your
+harness never varies before concluding a symptom is not reproducible** — the
+sweep was not evidence of absence, it was evidence about one viewport.
+
 **A two-minute check is one nobody runs.**
 The smoke suite was one suite until step frames and a 2.6s celebration took it
 past two minutes, at which point it stopped being run during work and started

@@ -161,6 +161,23 @@ check('with a fallback for engines without round()',
   (raw.match(/--c:\s*max\(14px,\s*min\(66px/g) || []).length >= 1)
 
 /**
+ * Everything that stands on a board coordinate is placed by a percentage of its
+ * own tile, never by `--x * var(--c)`.
+ *
+ * The two are the same position, but not the same *value*: `600% 100%` does not
+ * change when the tile size does, and `246px 41px` does. `.bot` and `.cat` are
+ * the only board elements that transition `translate`, so in pixels a resize
+ * looked exactly like a move — the room snapped to the new tile size and Robby
+ * animated to it, appearing to teleport a tile or two and slide back over the
+ * next tenth of a second. Measured at 1.6 tiles adrift on a 45px -> 35px change
+ * mid-step; 0 after.
+ */
+const placers = raw.match(/translate:\s*calc\([^;]*var\(--x\)[^;]*;/g) || []
+check(`board placements were found at all (${placers.length} rules)`, placers.length === 4)
+check(`none of them is in pixels (${placers.length} checked)`,
+  placers.every((r) => r.includes('100%') && !/var\(--x\)[^;]*\*\s*var\(--c\)|var\(--c\)\s*\*/.test(r)))
+
+/**
  * The board and the editor grid are sized from the box they are standing in,
  * not from a constant standing in for everything else on screen.
  *
