@@ -2,10 +2,11 @@
   import { parseMap } from '../engine/parse'
   import {
     assess, discard, grab, height, inside, move, paint, removable, rotate, starterDraft,
-    toMap, trayFloor, width, type Brush, type Draft, type Verdict,
+    draftMap, width, type Brush, type Draft, type Verdict,
   } from '../engine/editor'
-  import { DIRS, THEMES, type Dir, type Theme } from '../engine/types'
+  import { DIRS, posKey, spend, THEMES, type Dir, type Theme } from '../engine/types'
   import { sfx } from './audio'
+  import { DIR_ANGLE } from './colors'
   import { DECOR } from './decor'
   import type { Game } from './game.svelte'
   import { geom } from './geom'
@@ -31,24 +32,30 @@
    * looks in the editor exactly as it will look played, and a new world's
    * palette reaches the editor without anyone remembering to bring it.
    */
-  const world = $derived(parseMap(toMap(draft)).world)
+  const parsed = $derived(parseMap(draftMap(draft)))
+  const world = $derived(parsed.world)
+  /** Where the pieces are, read off the parsed world rather than off the raw
+      characters — the markup below used to test `ch === '*'` and `ch === 'R'`,
+      which is the legend restated in a template. */
+  const held = $derived(new Map(parsed.items.map((i) => [posKey(i.at), i.kind])))
   const cells = $derived.by(() => {
     const out = []
     for (let y = 0; y < H; y++)
       for (let x = 0; x < W; x++) {
-        const ch = draft.cells[y][x]
+        const cell = world.cells[y * W + x]
         out.push({
-          key: `${x},${y}`, x, y, ch,
-          ground: ch !== '#',
-          kind: world.cells[y * W + x].kind,
-          dir: world.cells[y * W + x].dir ?? null,
+          key: posKey({ x, y }), x, y,
+          ground: cell.kind !== 'wall',
+          kind: cell.kind,
+          dir: cell.dir ?? null,
+          item: held.get(posKey({ x, y })) ?? null,
+          start: parsed.start.x === x && parsed.start.y === y,
           ...geom(world, x, y),
         })
       }
     return out
   })
   const route = $derived(verdict.status === 'ok' ? new Set(verdict.route) : new Set<string>())
-  const BELT_SPIN: Record<string, number> = { right: 0, down: 90, left: 180, up: 270 }
 
   /** Solved on every finished stroke, never during one. */
   async function reassess() {
@@ -147,7 +154,7 @@
       theme: draft.theme,
       name: draft.name,
       tray: draft.tray,
-      map: toMap(draft),
+      map: draftMap(draft),
     })
   }
 
@@ -162,7 +169,7 @@
    * because a tray too small to hold the solution is a broken room rather than
    * a harder one — so the minus button simply stops there.
    */
-  const floor = $derived(verdict.status === 'ok' ? trayFloor(verdict.par) : null)
+  const floor = $derived(verdict.status === 'ok' ? spend(verdict.par) : null)
   const trayOf = (d: Dir) =>
     verdict.status === 'ok' ? (verdict.level.tray[d] ?? 0) : 0
 
@@ -240,22 +247,22 @@
                class:target={!!hover && hover[0] === c.x && hover[1] === c.y}
                style="--x:{c.x}; --y:{c.y}; --in:{c.in}; --rad:{c.rad}">
             {#if c.kind === 'belt'}
-              <span class="beltwrap" style="--spin:{BELT_SPIN[c.dir ?? 'right']}deg">
+              <span class="beltwrap" style="--spin:{DIR_ANGLE[c.dir ?? 'right']}deg">
                 <i class="band"></i><i class="arrows"></i><i class="lip a"></i><i class="lip b"></i>
               </span>
             {:else if c.kind === 'fragile'}
               <span class="strands">{@html STRANDS_SVG}</span>
             {/if}
-            {#if route.has(`${c.x},${c.y}`)}<span class="routedot"></span>{/if}
+            {#if route.has(c.key)}<span class="routedot"></span>{/if}
           </div>
         {/each}
 
-        {#each cells.filter((c) => c.ch === '*') as c (c.key)}
+        {#each cells.filter((c) => c.item === 'battery') as c (c.key)}
           <div class="item battery" style="--x:{c.x}; --y:{c.y}">
             <span class="cellwrap">{@html BATT_SVG}</span>
           </div>
         {/each}
-        {#each cells.filter((c) => c.ch === 'R') as c (c.key)}
+        {#each cells.filter((c) => c.start) as c (c.key)}
           <div class="bot flat on" style="--x:{c.x}; --y:{c.y}">{@html BOT_SVG(g.kit)}</div>
         {/each}
       </div>

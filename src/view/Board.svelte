@@ -1,6 +1,9 @@
 <script lang="ts">
   import { at } from '../engine/parse'
-  import { DELTA, OBJECTIVES, type Dir, type ItemKind } from '../engine/types'
+  import { passable } from '../engine/simulate'
+  import {
+    DELTA, OBJECTIVES, around, neighbours, posKey, type Dir, type ItemKind,
+  } from '../engine/types'
   import { flyBits } from './bits'
   import { DIR_ANGLE, DIR_COLOR } from './colors'
   import type { Game } from './game.svelte'
@@ -153,19 +156,19 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
   const reachable = $derived.by(() => {
     const home = g.trace.frames.length ? g.trace.frames[0].from : st.pos
     const seen = new Map<string, { x: number; y: number }[]>()
-    const key = (p: { x: number; y: number }) => `${p.x},${p.y}`
-    seen.set(key(home), [])
+    seen.set(posKey(home), [])
     const queue = [home]
     while (queue.length) {
       const p = queue.shift()!
-      const path = seen.get(key(p))!
+      const path = seen.get(posKey(p))!
       if (path.length >= 6) continue // she does not wander off across the room
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const n = { x: p.x + dx, y: p.y + dy }
-        if (seen.has(key(n))) continue
-        const cell = at(st.world, n)
-        if (cell.kind === 'wall' || cell.kind === 'blocked') continue
-        seen.set(key(n), [...path, n])
+      for (const n of neighbours(p)) {
+        if (seen.has(posKey(n))) continue
+        // the engine's own predicate, not a shorter one written out here: this
+        // used to test wall and blocked only, so she padded across shut gates
+        // and bridges that had already fallen
+        if (!passable(st.world, n)) continue
+        seen.set(posKey(n), [...path, n])
         queue.push(n)
       }
     }
@@ -192,7 +195,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
         return
       }
       stroll = route[i++]
-      lately = [...lately.slice(-5), `${stroll.x},${stroll.y}`]
+      lately = [...lately.slice(-5), posKey(stroll)]
       walking = setTimeout(step, 380 + Math.random() * 160)
     }
     padding = true
@@ -213,11 +216,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
 
   function throwParty(atPos: { x: number; y: number }) {
     // tiles she can bolt to, never the one Robby is standing on
-    const near = []
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const p = { x: atPos.x + dx, y: atPos.y + dy }
-      if (at(st.world, p).kind !== 'wall') near.push(p)
-    }
+    const near = around(atPos).filter((p) => at(st.world, p).kind !== 'wall')
     for (let i = near.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[near[i], near[j]] = [near[j], near[i]]
@@ -246,10 +245,10 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
       () => {
         if (padding) return // still on her way somewhere
         const here = stroll ?? (g.trace.frames.length ? g.trace.frames[0].from : st.pos)
-        const from = reachable.get(`${here.x},${here.y}`)
+        const from = reachable.get(posKey(here))
         // routes are held from Robby's tile, so re-root them on hers
         const options = [...reachable.entries()]
-          .filter(([k, route]) => route.length > 0 && k !== `${here.x},${here.y}`)
+          .filter(([k, route]) => route.length > 0 && k !== posKey(here))
           .filter(([k]) => !lately.includes(k))
         const pick = (options.length ? options : [...reachable.entries()].slice(1))[
           Math.floor(Math.random() * Math.max(1, options.length))
@@ -297,7 +296,6 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
       .join(' '),
   )
 
-  const BELT_SPIN: Record<string, number> = { right: 0, down: 90, left: 180, up: 270 }
 
   const bd = $derived(ev === 'bonk' && st.dir ? DELTA[st.dir as Dir] : { x: 0, y: 0 })
   const botCls = $derived(
@@ -490,7 +488,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
         {#if c.kind === 'belt'}
           <!-- drawn running east and rotated into place, so one animation
                serves all four directions -->
-          <span class="beltwrap" style="--spin:{BELT_SPIN[c.dir ?? 'right']}deg">
+          <span class="beltwrap" style="--spin:{DIR_ANGLE[c.dir ?? 'right']}deg">
             <i class="band"></i><i class="arrows"></i>
             <i class="lip a"></i><i class="lip b"></i>
           </span>

@@ -63,6 +63,22 @@ because the line said `ok`. It lives in the harness now as `sweepBoard()` /
 end, and **an empty sample is a failure**. Put the count in the label and make
 the count itself an assertion.
 
+**A check built on the thing it checks proves agreement, not correctness.**
+The legend round-trip — parse every shipped map, write it back, compare — reads
+like proof the table is right. It is not: parse and serialise share the table,
+so any *consistent* relabelling round-trips perfectly. Swapping `E` and `W` was
+planted to find out, and it **passed** while failing twenty tests elsewhere.
+What proved the meaning was the solver re-deriving every par. The round trip is
+still worth having, and its comment now says which half it holds. Distinct from
+the two entries below: not an empty sample, not deletion-only — a check whose
+subject and whose yardstick are the same object.
+
+The corollary is the general defence, and it is cheap: **plant the fault.** Two
+checks written the same afternoon passed on the fault they were written for —
+the minimap one counted marks that the parts on the floor were still supplying,
+so a room whose conveyors had stopped being drawn still scored five. Both had
+been written, run, and seen to say `ok`.
+
 **A check that only catches deletion is half a check, and should say so.**
 Several CSS invariants assert a literal value in the built file — "the fins are
 pulled down past the flame overhang" is `bottom:-6%`. That catches the rule

@@ -246,6 +246,19 @@ await go(() => $$('.world')[2].click(), () => !!$('.rooms') && !$('.menu'))
 check('the Scrapyard has eight rooms', $$('.room').length === 8)
 check('the level select stands in the yard', !!$('.rooms .scrapground'))
 
+/**
+ * The thumbnail is read off the parsed world, not off the map characters. It
+ * used to know four of them and drew everything else as plain path, so a yard
+ * full of conveyors looked like an empty corridor. Asserted here rather than in
+ * the Lab because the Lab has no machinery to draw — which is the whole point.
+ */
+{
+  const machinery = $$('.room .mini i.m').length
+  const lab = $$('.mini').length
+  check(`the yard's thumbnails show its machinery (${machinery} marks over ${lab} rooms)`,
+    lab > 0 && machinery > 0)
+}
+
 await go(() => $$('.room')[0].click(), () => $('.scene')?.dataset.theme === 'scrap')
 check('Grand Tour runs belts in all four directions',
   new Set($$('.beltwrap').map((b) => b.style.getPropertyValue('--spin'))).size === 4)
@@ -499,9 +512,13 @@ if (unstyled.length) console.log('     no palette for:', unstyled.join(', '))
  *
  * The rule: those names must always be qualified.
  */
+// ItemKind then CellKind, transcribed from src/engine/types.ts. `oneway` was
+// missing from this list for as long as it existed, so a bare `.oneway {}` was
+// the one board kind nothing here would have caught. Deriving the list from the
+// engine rather than re-typing it is the real fix and is still open.
 const KINDS = [
   'cog', 'coil', 'core', 'battery', 'key',
-  'exit', 'belt', 'gate', 'plate', 'blocked', 'fragile', 'floor', 'wall',
+  'exit', 'belt', 'gate', 'plate', 'blocked', 'fragile', 'floor', 'wall', 'oneway',
 ]
 const bare = KINDS.filter((k) => new RegExp(`(^|[,{}])\\.${k}[,{]`).test(raw))
 check(`board kinds are never styled bare (${KINDS.length} checked)`, bare.length === 0)

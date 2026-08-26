@@ -31,6 +31,22 @@ structural classes would make the collision impossible to write rather than
 detectable after the fact, which ends the category instead of policing it —
 `doc/BOARD.md` [R-010], and the lesson in `doc/META.md`.
 
+### Three more were inside the engine, where no guard looks
+
+Found while contracting the level machinery, and now ended:
+
+| Collision | The two meanings |
+|---|---|
+| `at()` | `parse.ts` `(world, p) → Cell` vs `editor.ts` `(draft, x, y) → string` |
+| `toMap()` | `generate.ts` synthesised and cropped a grid; `editor.ts` joined rows |
+| `Cell` | `types.ts` a tile; `generate.ts` a `{x, y}` — which is a `Vec2` |
+
+Nothing caught these, because the guards read the built CSS: they defend the
+board's namespace and know nothing about TypeScript's. They are now `cellAt`,
+`draftMap` / `renderMap`, and `Vec2`. **The lesson generalises past CSS** — a
+short, generic name in a small module is a collision waiting for the second
+module, and `src/engine/` is seven files that all import each other.
+
 ## Everything on the board is sized from one variable
 
 ```css

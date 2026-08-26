@@ -277,6 +277,10 @@
 .mini i.s { background: #2b8e8a; border-radius: 50%; }
 .mini i.b { background: var(--power); border-radius: 50%; }
 .mini i.r { background: #4fd1ff; }
+/* machinery: belts, bridges, gates, one-ways, and the parts they guard. One
+   mark for all of them on purpose — at 4px a square can say "there is
+   something here", and nothing finer than that. */
+.mini i.m { background: #00000059; }
 
 /* the Cheese Moon's badge: a moon, with the stuff showing in the craters */
 .e-moon { fill: #b9c0cb; }

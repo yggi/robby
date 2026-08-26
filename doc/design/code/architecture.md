@@ -5,10 +5,14 @@
 ```
 src/
   engine/          pure TypeScript, no DOM, no timing, fully unit-tested
-    types.ts       Dir, Cell, Item, Level, Chapter, Theme (+ THEMES const)
-    parse.ts       ASCII map → World. The map format lives here.
+    types.ts       Dir, Cell, Item, Level, Chapter, Theme; the const arrays the
+                   unions derive from; and the grid primitives everybody needs
+    legend.ts      the map format, as a table read in both directions
+    parse.ts       ASCII map → World, dispatching through the legend
     simulate.ts    the rules. isDecision, onEnter triggers, belts, the Trace
-    solve.ts       BFS solver → shortest program or null. 57 lines.
+    solve.ts       BFS solver → shortest program or null. 56 lines.
+    level.ts       map → a solved, trayed Level, or nothing. The one place
+                   that asks the solver what a room is worth
     levels.ts      every shipped level, as ASCII maps with a verified par
     generate.ts    procedural rooms for the practice tile
     editor.ts      the editor's model: drafts, painting, the verdict
@@ -72,10 +76,15 @@ wins somewhere unexpected.
 
 ## `Chapter` is the unit of content
 
-And it pays off twice: **practice rooms** and **rooms a child built** are both
-assembled at runtime into a `Chapter` like any other, so the level select,
-minimaps, playing, pips and the next button all work on them with no special
-cases. See [`../game/content.md`](../game/content.md).
+**Rooms a child built** are assembled at runtime into a `Chapter` like any
+other, so the level select, minimaps, playing, pips and the next button all work
+on them with no special cases.
+
+**Practice rooms are not**, though this page and two others said they were. A
+practice room is a bare `Level` held beside the chapter system, and it costs a
+special case in six places. Read that as the argument *for* the pattern: the
+half that was built as a `Chapter` needed none of them.
+`doc/BOARD.md` [R-028]. See [`../game/content.md`](../game/content.md).
 
 ## Where it is thin
 

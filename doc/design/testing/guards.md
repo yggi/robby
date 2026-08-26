@@ -48,7 +48,9 @@ Some claims are asserted as literal values in the built file — "the fins are
 pulled down past the flame overhang" is a regex for `bottom:-6%`.
 
 Those catch **deletion, not wrongness**, and they must be re-tuned by hand every
-time the value is. There are about a dozen. They are worth keeping and worth
+time the value is. **There are 27**, counted — this page said "about a dozen"
+for months. The most brittle of them pins a rule's whole body and the order of
+its declarations, so adding one property to `.launchpad` breaks it. They are worth keeping and worth
 being honest about: a check that can only notice a rule vanishing is half a
 check. Replacing them needs something that can see, and what that is in a repo
 with no external assets is an open thread (`doc/NOTES.md`, `doc/BOARD.md` [R-020]).

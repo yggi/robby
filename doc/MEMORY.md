@@ -64,8 +64,11 @@ this reason. Do not make it look like a dot per tile; that teaches the opposite
 of what is true.
 
 The map format, the cell kinds, the item kinds and the two goal types are in
-`doc/design/game/rules.md`. Absolute arrows rather than turn-left/turn-right,
-because mental rotation mostly is not there before six.
+`doc/design/game/rules.md`; the table itself is `src/engine/legend.ts`, and it
+is the **save format** — a built room is stored as its map string and nothing
+else, so a character that changes meaning rewrites every room already made.
+Absolute arrows rather than turn-left/turn-right, because mental rotation mostly
+is not there before six.
 
 ## 3. The engine knows nothing about the view
 
@@ -124,10 +127,15 @@ Worlds escalate the *kind* of thinking, not the token count. Test World is a
 developer bench that ships to players; whether it should is a live thread
 (`doc/NOTES.md`).
 
-`Chapter` is the unit of content, and it pays off twice: **practice rooms** and
-**rooms a child built** are both assembled at runtime into a `Chapter` like any
-other, so the level select, minimaps, playing, pips and the next button all work
-on them with no special cases.
+`Chapter` is the unit of content, and **rooms a child built** are assembled at
+runtime into one like any other — so the level select, minimaps, playing, pips
+and the next button all work on them with no special cases.
+
+**Practice rooms are not**, though this file said they were for months. A
+practice room is a bare `Level` held outside the chapter system
+(`game.svelte.ts`), and it costs a special case in six places. That is the
+argument for the pattern rather than against it: the half that was done as a
+`Chapter` needed none. `doc/BOARD.md` [R-028].
 
 The economy, the workshop, the practice tile and the editor's shipped slice are
 in `doc/design/game/content.md`.
@@ -209,10 +217,16 @@ latin woff2 only. → `doc/design/code/stack.md`
 ```
 src/
   engine/          pure TypeScript, no DOM, no timing, fully unit-tested
-    types.ts       Dir, Cell, Item, Level, Chapter, Theme (+ THEMES const)
-    parse.ts       ASCII map → World. The map format lives here.
+    types.ts       Dir, Cell, Item, Level, Chapter, Theme, and the const arrays
+                   the unions derive from: THEMES, CELL_KINDS, ITEM_KINDS.
+                   Also the grid primitives — step, neighbours, around, posKey,
+                   spend — which exist so nobody writes [[1,0],[-1,0],…] again
+    legend.ts      the map format, as a table read in both directions
+    parse.ts       ASCII map → World, dispatching through the legend
     simulate.ts    the rules. isDecision, onEnter triggers, belts, the Trace
-    solve.ts       BFS solver → shortest program or null (57 lines)
+    solve.ts       BFS solver → shortest program or null (56 lines)
+    level.ts       map + theme → a solved, trayed Level, or nothing.
+                   The one place that asks the solver what a room is worth
     levels.ts      every shipped level, as ASCII maps with a verified par
     generate.ts    procedural rooms for the practice tile
     editor.ts      the editor's model: drafts, painting, the verdict

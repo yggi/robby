@@ -1,8 +1,8 @@
 import { initialState, simulate } from '../engine/simulate'
 import { chapters } from '../engine/levels'
 import { playable, type Draft, type SavedRoom } from '../engine/editor'
-import { generateFor, type ChapterId } from '../engine/generate'
-import type { Chapter, Dir, FrameEvent, Level } from '../engine/types'
+import { canGenerate, generateFor } from '../engine/generate'
+import { around, spend, type Chapter, type Dir, type FrameEvent, type Level } from '../engine/types'
 import { sfx } from './audio'
 import {
   loadBits, loadRooms, saveRooms, loadKit, loadOwned, loadSolved,
@@ -177,10 +177,15 @@ export function createGame() {
     }
     return null
   })
-  /** Only the worlds with a generator behind them offer an endless room. */
-  const canPractice = $derived(chapter.id === 'lab' || chapter.id === 'forest')
+  /**
+   * Only the worlds with a generator behind them offer an endless room. Asked
+   * of `generate.ts` rather than restated here — the two lists disagreeing was
+   * one unchecked cast away from reading an undefined seed list.
+   */
+  const canPractice = $derived(canGenerate(chapter.id))
 
-  const left = (d: Dir) => (level.tray[d] ?? 0) - slots.filter((s) => s.dir === d).length
+  const placed = $derived(spend(program))
+  const left = (d: Dir) => (level.tray[d] ?? 0) - placed[d]
   const isSolved = (id: string) => solved.includes(id)
 
   function clearTimer() {
@@ -242,8 +247,10 @@ export function createGame() {
   }
 
   /** Always returns a room: the roller falls back rather than coming back empty. */
-  const rollPractice = (): Level =>
-    generateFor(chapter.id as ChapterId, (Math.random() * 0xffffffff) >>> 0)
+  const rollPractice = (): Level | null =>
+    canGenerate(chapter.id)
+      ? generateFor(chapter.id, (Math.random() * 0xffffffff) >>> 0)
+      : null
 
   let rolling = $state(false)
 
@@ -400,8 +407,9 @@ export function createGame() {
 
   const DASH_MS = 760
   function dashOut() {
-    const ways = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]
-    const [dx, dy] = ways[Math.floor(Math.random() * ways.length)]
+    // the eight directions, as offsets from nowhere in particular
+    const ways = around({ x: 0, y: 0 })
+    const { x: dx, y: dy } = ways[Math.floor(Math.random() * ways.length)]
     leaving = { dx, dy }
     sfx.dash()
     setTimeout(() => sfx.dash(), 200) // Robby, a beat behind her

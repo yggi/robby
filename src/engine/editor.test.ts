@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assess, discard, grab, move, paint, playable, removable, rotate,
-  starterDraft, toMap, width, height,
+  starterDraft, draftMap, width, height,
 } from './editor'
 import type { Draft } from './editor'
 
@@ -22,14 +22,14 @@ describe('the editor model', () => {
 
   it('will not paint outside the wall', () => {
     const d = starterDraft('lab')
-    expect(toMap(paint(d, 0, 0, 'floor'))).toEqual(toMap(d))
-    expect(toMap(paint(d, 8, 3, 'floor'))).toEqual(toMap(d))
+    expect(draftMap(paint(d, 0, 0, 'floor'))).toEqual(draftMap(d))
+    expect(draftMap(paint(d, 8, 3, 'floor'))).toEqual(draftMap(d))
   })
 
   it('will not let Robby be painted over: he can only be moved', () => {
     const d = starterDraft('lab')
-    expect(toMap(paint(d, 1, 3, 'wall'))).toEqual(toMap(d))
-    expect(toMap(paint(d, 1, 3, 'battery'))).toEqual(toMap(d))
+    expect(draftMap(paint(d, 1, 3, 'wall'))).toEqual(draftMap(d))
+    expect(draftMap(paint(d, 1, 3, 'battery'))).toEqual(draftMap(d))
   })
 
   it('turns a conveyor on the spot, and leaves anything else alone', () => {
@@ -37,7 +37,7 @@ describe('the editor model', () => {
     d = paint(d, 4, 3, 'belt')
     expect(d.cells[3][4]).toBe('E')
     expect(rotate(d, 4, 3).cells[3][4]).toBe('S')
-    expect(toMap(rotate(d, 2, 3))).toEqual(toMap(d))
+    expect(draftMap(rotate(d, 2, 3))).toEqual(draftMap(d))
   })
 
   it('throws a piece away when it is carried off the edge', () => {
@@ -48,7 +48,7 @@ describe('the editor model', () => {
   it('but never Robby', () => {
     expect(removable('R')).toBe(false)
     const d = starterDraft('lab')
-    expect(toMap(discard(d, [1, 3]))).toEqual(toMap(d))
+    expect(draftMap(discard(d, [1, 3]))).toEqual(draftMap(d))
   })
 
   it('picks up a piece, and paints bare ground', () => {
@@ -60,7 +60,30 @@ describe('the editor model', () => {
 
   it('leaves floor behind when something is dragged away', () => {
     const d = draw('lab', ['#####', '#R.*#', '#####'])
-    expect(toMap(move(d, [1, 1], [2, 1]))).toEqual(['#####', '#.R*#', '#####'])
+    expect(draftMap(move(d, [1, 1], [2, 1]))).toEqual(['#####', '#.R*#', '#####'])
+  })
+
+  /**
+   * Every stroke copies the draft, and the copy used to list `theme` and
+   * `cells` only — so naming a room or tightening its tray and then painting
+   * one more tile threw both away silently.
+   */
+  it('carries the name and the tray through a stroke', () => {
+    const named: Draft = {
+      theme: 'lab',
+      name: 'Emilia',
+      tray: { right: 5 },
+      cells: ['#######', '#R...*#', '#######'].map((r) => r.split('')),
+    }
+    for (const after of [
+      paint(named, 2, 2, 'wall'),
+      rotate(paint(named, 3, 1, 'belt'), 3, 1),
+      move(named, [5, 1], [4, 1]),
+      discard(named, [5, 1]),
+    ]) {
+      expect(after.name).toBe('Emilia')
+      expect(after.tray).toEqual({ right: 5 })
+    }
   })
 })
 
@@ -116,6 +139,25 @@ describe('saved rooms', () => {
   it('drop out of the list rather than being played at a par that is not true', () => {
     const broken = { id: 'x', theme: 'lab' as const, map: ['#####', '#R#*#', '#####'] }
     expect(playable(broken, 1)).toBeNull()
+  })
+
+  /**
+   * The rooms list is `$derived` over everything in storage, and there is no
+   * error boundary — so a room that throws takes the whole screen with it, on a
+   * phone, in front of a child. An incomplete map used to reach `parseMap` and
+   * throw `level has no R`; the only failure allowed here is dropping out.
+   */
+  it('drop out rather than throwing, however broken the map is', () => {
+    const cases = [
+      ['no robot', ['#####', '#..*#', '#####']],
+      ['two robots', ['#######', '#R.R.*#', '#######']],
+      ['no battery', ['#####', '#R..#', '#####']],
+      ['nothing at all', ['#####', '#...#', '#####']],
+      ['no rows', []],
+    ] as const
+    for (const [why, map] of cases)
+      expect({ why, level: playable({ id: 'x', theme: 'lab', map: [...map] }, 1) })
+        .toEqual({ why, level: null })
   })
 })
 

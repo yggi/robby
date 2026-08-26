@@ -28,8 +28,10 @@ a dot per tile; that teaches the opposite of what is true.
 
 ## The map format
 
-A level is `string[]`. The legend lives in `src/engine/parse.ts` and is the
-single source of truth for it:
+A level is `string[]`. The legend lives in `src/engine/legend.ts` as a table
+read in **both** directions — `parse.ts` reads it, and `charFor` writes it back,
+which is what lets the editor's palette be a list of tiles rather than a second
+copy. It was five partial copies before, one per caller.
 
 ```
 #        wall
@@ -51,6 +53,15 @@ Rows are padded to the widest with `#`, so a short row is walled, not ragged.
 That a room is *text* is why a built room saves as nothing but its map string,
 why a room could be a URL, and why the editor and the shipped levels are the
 same kind of object.
+
+**`A-I` is eight plates, not nine: there is no plate `E`, and therefore no plate
+for gate 5.** `E` was spent on the east-running conveyor first, and the old
+parser read the belt table before the letter range, so `E` in a map has always
+been a conveyor while this legend advertised otherwise. It stays that way on
+purpose — **the characters are the save format**, and moving one would silently
+rewrite every room anybody has already built. `legend.ts` states the gap, and a
+test asserts no character is spent twice, so the next such clash has to be
+decided rather than absorbed by the order of a table.
 
 ## Cell kinds, and what each one is for
 

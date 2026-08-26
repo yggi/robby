@@ -2,12 +2,18 @@
 
 ## `Chapter` is the unit, and that is why there are no special cases
 
-A `Chapter` is an id, a name, a theme and a list of levels. Everything the game
-shows is one: the four authored worlds, the bench, **the practice room** (a
-chapter of one, rolled at runtime) and **the rooms a child built** (a chapter
-assembled from `localStorage`). So the level select, the minimaps, playing, the
-progress pips and the next button all work on generated and hand-built rooms
-with no special-casing at all.
+A `Chapter` is an id, a name, a theme and a list of levels. Almost everything
+the game shows is one: the four authored worlds, the bench, and **the rooms a
+child built** (a chapter assembled from `localStorage`). So the level select,
+the minimaps, playing, the progress pips and the next button all work on
+hand-built rooms with no special-casing at all.
+
+**The practice room is the exception, and it is instructive.** It was described
+here as "a chapter of one, rolled at runtime" and it is not: it is a bare
+`Level` held beside the chapter system, and it needs a special case in six
+places — the level swap, three places that clear it, the reward, the progress
+pips and the level-select tile. Two runtime-assembled things, two mechanisms,
+and only one of them free. `doc/BOARD.md` [R-028].
 
 That was not the motivation for `Chapter`. It is the consequence, and it is the
 best argument in the codebase for picking the unit that makes special cases

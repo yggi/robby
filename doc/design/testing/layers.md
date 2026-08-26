@@ -2,9 +2,13 @@
 
 | Suite | What it covers | Time |
 |---|---|---|
-| `npm run test:unit` | the engine, the solver, **every par**, the generator, the editor model | ~5s |
-| `npm test` | the above, plus a build, plus the fast smoke suite (142 checks) | ~15s |
-| `npm run test:full` | plays levels through: celebrations, world transitions, the shop | ~2min |
+| `npm run test:unit` | the engine, the solver, **every par**, the generator, the editor model (276 tests) | ~5s |
+| `npm test` | the above, plus a build, plus the fast smoke suite (191 checks) | ~15s |
+| `npm run test:full` | plays levels through: celebrations, world transitions, the shop (142 checks) | ~2min |
+
+Those counts drift, which is why they are worth printing rather than trusting:
+the 142 recorded here was the *full* suite's, sitting in the fast suite's row.
+**Read what the run prints.**
 
 `npm run check:full` is all of it, ~2.5min, and is what CI runs.
 
