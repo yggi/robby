@@ -17,6 +17,57 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the walk and the hold were one number
+
+Follow-up on the teleport report, which was **not** fixed by the placement
+change: it still happened, deterministically, twice in the Lab finale.
+
+Launch Bay is `#R....#@#` over `#####.#.#` over `#####...#` over `#####*###` —
+right along the corridor, down to the battery at (5,4), **back up one tile**,
+then right and up to the rocket. Its two notable moments are a direction change
+and a pickup, which is what the report named.
+
+Measured again, this time across five viewports and pixel ratios and both
+orientations: largest single-sample move 0.118 tiles, no reversal anywhere. So
+the rendered position is not jumping. What *is* wrong is the speed:
+
+```
+moving 2400-2674ms  covering 0.60 tiles      into the battery — a lunge
+moving 2688-3009ms  covering 0.33 tiles      then a long easing crawl
+  ...tiny flickers, never a full stop...
+moving 3520-3793ms  covering 0.99 tiles      and straight back up
+```
+
+`DUR` says in its own comment that it is *how long each frame is held*, and its
+own pickup entry says the hold is there because "the bubble ticking over is
+worth watching". But the same number was fed to `--step`, which is the CSS
+transition on the robot's `translate` — so the hold was spent on the *movement*.
+He never stood on the battery to be watched: he crawled onto it over a second
+and a sixth, decelerating the whole way, and then snapped into a move that goes
+**back the way he came**. A lurch, then a yank backwards, in the one room whose
+answer doubles back.
+
+`walkMs(event)` is the walk now — never more than 380ms, 210 for a belt —
+and `DUR` stays the hold. Same room after:
+
+```
+moving 2384-2595ms  covering 0.94 tiles      walks in
+still  2704-3536ms  (832ms)                  stands on it while the bubble ticks
+moving 3536-3794ms  covering 0.98 tiles      walks back up
+```
+
+Which is what the comment always said it wanted. It also fixes `denied` (added
+this morning, 900ms) and `gate`/`collapse`, all of which stretched the walk.
+
+Four unit tests, planted by making the two one number again — two of them go red.
+
+**One of the two reported moments is still unaccounted for.** The battery is
+"about 5 tiles before the end" and it is now explained; "after about 3 tiles" is
+a plain corner with a 380ms step either side of it and nothing held. Asked
+rather than guessed at.
+
+306 unit tests (was 302), 228 fast, 145 full.
+
 ## 2026-08-26 — Robby was not teleporting; the room was resizing under him
 
 Reported: *sometimes Robby jumps back and forward in his path, teleporting one

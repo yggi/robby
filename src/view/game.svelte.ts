@@ -23,6 +23,24 @@ export const DUR: Record<FrameEvent, number> = {
   bonk: 980, shrug: 1000, stranded: 1200, win: 2600,
 }
 
+/**
+ * How long the *walk* takes, which is not the same thing as how long the frame
+ * is held — and used to be, because one number did both jobs.
+ *
+ * A robot crossing one tile always crosses it at a walk. Held frames are held
+ * so that something can be *watched*: the bubble ticking a part off, the rocket
+ * shuddering him away. Spending that time on the movement instead meant he
+ * never stood still to be watched — he crawled into the battery tile over a
+ * second and a sixth, with a long easing tail, and then snapped straight into
+ * the next move. On the Lab finale, where the next move doubles back the way he
+ * came, that reads as him lurching and being yanked backwards.
+ *
+ * So: the walk is a walk, the hold is what is left over, and he spends it
+ * standing on the tile with the thing that just happened.
+ */
+const WALK_MS = 380
+export const walkMs = (e: FrameEvent) => Math.min(e === 'carry' ? 210 : WALK_MS, DUR[e])
+
 /** The robot walking itself back to the start after a failure. */
 const RETURN_MS = 820
 
@@ -168,7 +186,8 @@ export function createGame() {
   /** True from the first frame of the celebration, not after it. */
   const celebrating = $derived(frame?.event === 'win')
   const won = $derived(celebrating || (!running && playhead >= 0 && trace.outcome === 'win'))
-  const stepMs = $derived(returning ? RETURN_MS : frame ? DUR[frame.event] : 380)
+  // `--step` drives the robot's translate, so it is the *walk*, not the hold
+  const stepMs = $derived(returning ? RETURN_MS : frame ? walkMs(frame.event) : 380)
   const lastOfChapter = $derived(li === chapter.levels.length - 1)
   /**
    * Where a finished world hands over to. Never into rooms a child built —
