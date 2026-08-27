@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DUR, holdMs, walkMs } from './game.svelte'
+import { afterCamera, CAMERA_MS, DUR, holdMs, walkMs } from './game.svelte'
 import { type FrameEvent } from '../engine/types'
 
 const EVENTS = Object.keys(DUR) as FrameEvent[]
@@ -52,3 +52,21 @@ describe('the walk and the hold are different clocks', () => {
   })
 })
 const REDUCED = 240
+
+/**
+ * The camera is a 900ms CSS transition on `.board`, and a scale animation is at
+ * its most expensive as it *settles* — the browser re-rasterises the scaled
+ * content. The rocket's cue was scheduled at 900ms exactly, so every win on a
+ * rocket room built three oscillators on the very frame the push-in came to
+ * rest. The same mistake as the walk that ended when its own frame was
+ * retriggered, one layer up.
+ */
+describe('nothing expensive lands on the frame the camera settles', () => {
+  it('leaves a real gap after the camera, not a rounding one', () => {
+    expect(afterCamera()).toBeGreaterThan(CAMERA_MS + 200)
+  })
+
+  it('and never schedules anything inside the camera move', () => {
+    for (const gap of [0, 60, 260, 400]) expect(afterCamera(gap)).toBeGreaterThanOrEqual(CAMERA_MS)
+  })
+})

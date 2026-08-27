@@ -17,6 +17,57 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-27 — a cue scheduled on the frame the camera settles
+
+Reported: jitter or stutter at the end of the zoom-in, *"e.g. when reaching the
+rocket"*. That parenthesis turned out to be the whole clue.
+
+Winning starts a 900ms camera push-in — a CSS transition on `.board` and
+`.decor`. And `tick()` had, on the win frame:
+
+```js
+if (level.goal.type === 'exit') setTimeout(() => sfx.launch(), 900)
+```
+
+**900ms, the camera's duration to the millisecond**, and only on rocket rooms,
+because only they have that cue. So every win on a rocket room synthesised three
+oscillators on the exact frame the push-in came to rest — and a scale animation
+is at its most expensive precisely as it settles, because that is when the
+browser re-rasterises the scaled content at its new size. Two of the heaviest
+frames in the game, deliberately stacked.
+
+It is the same mistake as the walk that ended when its own frame was retriggered,
+one layer up: two clocks written as the same constant, colliding because nothing
+said they must not. `CAMERA_MS` names the duration, `afterCamera()` is the only
+way to schedule against it, and it leaves 260ms.
+
+Two checks, both planted: a unit test that `afterCamera()` clears the camera by
+more than a rounding margin (fails when the gap is removed), and a smoke check
+that reads **both** camera transitions back out of the built stylesheet and
+fails when the CSS and the code's copy disagree — planted by slowing the CSS to
+1200ms. It reads seconds, because the minifier writes `900ms` as `.9s`.
+
+### What did not survive measurement
+
+- **Layer churn.** `will-change: transform` on `.board`, on the theory that the
+  compositor was promoting and demoting around the transition: no change to the
+  frame profile at all. Not shipped.
+- **The celebration colliding with the camera's first frame.** Winning builds
+  forty confetti spans, three shock rings, the rays, a full-board flash and the
+  flying coins, all in the frame the zoom starts — a measured 31–50ms spike,
+  every run, at both pixel ratios. Deferring the whole burst by one frame was
+  tried and **moved the spike without shrinking it**, so it was reverted rather
+  than shipped with a comment claiming a benefit it did not have. The spike is
+  real and still there; it is the cost of painting forty-five new animated nodes,
+  and reducing it means reducing them, which is a design decision rather than a
+  bug fix.
+- **The end of the zoom itself**, in this environment: 17ms frames across five
+  runs at DPR 1 and DPR 3, with no main-thread long tasks anywhere. Headless
+  Chromium has no GPU here, so it cannot show a raster hitch; the fix above was
+  found by reading the schedule, not by reproducing it.
+
+310 unit tests (was 308), 230 fast checks (was 228), 145 full.
+
 ## 2026-08-26 — the walk and the hold were one number
 
 Follow-up on the teleport report, which was **not** fixed by the placement

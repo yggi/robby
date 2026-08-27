@@ -161,6 +161,18 @@ check('with a fallback for engines without round()',
   (raw.match(/--c:\s*max\(14px,\s*min\(66px/g) || []).length >= 1)
 
 /**
+ * The code keeps a copy of how long the camera takes, so that it can schedule
+ * cues clear of the frame it settles on. A copy is only worth having while it
+ * is true, and the original is a CSS transition — so read it back.
+ */
+// the minifier writes 900ms as .9s, so read seconds and convert
+const cameraRules = [...raw.matchAll(/transition:transform ([\d.]+)s cubic-bezier\(\.4,0,\.2,1\)/g)]
+  .map((m) => Math.round(parseFloat(m[1]) * 1000))
+check(`the camera's transitions were found (${cameraRules.length} rules)`, cameraRules.length === 2)
+check(`and both take as long as the code thinks (${cameraRules.length} checked)`,
+  cameraRules.every((ms) => ms === 900))
+
+/**
  * Everything that stands on a board coordinate is placed by a percentage of its
  * own tile, never by `--x * var(--c)`.
  *

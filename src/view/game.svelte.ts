@@ -59,6 +59,31 @@ export const walkMs = (e: FrameEvent, reduce = false) => {
 /** The robot walking itself back to the start after a failure. */
 const RETURN_MS = 820
 
+/**
+ * How long the camera takes to push in on a win or pull back into a new room.
+ *
+ * It is a CSS transition — on `.board` and on `.decor` — and this is the code's
+ * copy of that number, kept honest by a smoke check that reads it back out of
+ * the stylesheet. It exists so that the rule below can be stated.
+ */
+export const CAMERA_MS = 900
+
+/**
+ * When to fire something that costs a frame, given the camera is moving.
+ *
+ * **Never at the moment it settles.** The rocket's cue used to be scheduled at
+ * 900ms, which was the camera's duration to the millisecond: every win on a
+ * rocket room built three oscillators on the exact frame the push-in came to
+ * rest. A scale animation is already at its most expensive as it settles — the
+ * browser re-rasterises the scaled content — and dropping audio synthesis on top
+ * of that frame is what a stutter at the end of a zoom is made of.
+ *
+ * This is the same mistake as the walk that ended when its own frame was
+ * retriggered, one layer up: two clocks written as the same constant, colliding
+ * because nothing said they must not (`doc/META.md`).
+ */
+export const afterCamera = (gap = 260) => CAMERA_MS + gap
+
 export const CHAPTERS = chapters
 export type Screen = 'menu' | 'rooms' | 'play' | 'store' | 'editor' | 'intro'
 
@@ -538,7 +563,8 @@ export function createGame() {
     cue ? cue() : sfx.step()
     if (f.event === 'win') {
       award()
-      if (level.goal.type === 'exit') setTimeout(() => sfx.launch(), 900)
+      // clear of the camera settling — see `afterCamera`
+      if (level.goal.type === 'exit') setTimeout(() => sfx.launch(), afterCamera())
       zoom = 2 // push in on the celebration
       focus = { ...f.state.pos }
     }

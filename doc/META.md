@@ -79,13 +79,16 @@ a timer race that clean timers win. **List what the harness never varies before
 calling a symptom unreproducible**; a green sweep is evidence about the axis you
 moved, not about the one you did not.
 
-**An animation that ends when it is retriggered is a race, not a schedule.**
-The robot's walk was 380ms and his frame was held 380ms, so every step finished
-at the instant the next began. On a four-tile run bought by one instruction that
-race ran four times over, and a transition that loses it restarts from where it
-began — on screen, a tile backwards and a snap forward. Under reduced motion the
-walk was simply longer than the hold and lost every time. **Two clocks that must
-not collide need a stated margin and a check, not equal constants and hope.**
+**Two clocks written as the same constant will collide.**
+Twice, a day apart. The robot's walk was 380ms and his frame was held 380ms, so
+every step finished at the instant the next began; on a four-tile run bought by
+one instruction that race ran four times, and a transition that loses it restarts
+from where it began — a tile backwards and a snap forward. Then the rocket's cue
+was scheduled at 900ms and the camera's push-in *was* 900ms, so audio synthesis
+landed on the frame a scale animation settles, which is the frame it re-rasters
+on. Neither reproduced in a headless browser, whose timers are clean and whose
+GPU is absent. **A margin between two clocks has to be stated and checked; equal
+constants are a collision waiting for a slower machine.**
 
 **A two-minute check is one nobody runs.**
 The smoke suite was one suite until step frames and a 2.6s celebration took it
