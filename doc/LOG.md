@@ -61,12 +61,37 @@ this morning, 900ms) and `gate`/`collapse`, all of which stretched the walk.
 
 Four unit tests, planted by making the two one number again — two of them go red.
 
-**One of the two reported moments is still unaccounted for.** The battery is
-"about 5 tiles before the end" and it is now explained; "after about 3 tiles" is
-a plain corner with a 380ms step either side of it and nothing held. Asked
-rather than guessed at.
+### The second one was a race, and asking pinned it
 
-306 unit tests (was 302), 228 fast, 145 full.
+The first fix explained the battery. The other moment was reported as *along the
+top corridor*, and as a real discontinuity — "for a moment he is genuinely
+somewhere he has already been, then he jumps forward to catch up".
+
+The corridor is four tiles bought by **one instruction**: four back-to-back
+`step` frames with no pause anywhere in them. And the walk was 380ms while the
+frame was held 380ms — **the CSS transition ended at the very instant it was
+retriggered**. Which side wins is timer jitter, and a transition that loses is
+interrupted rather than finished; restarting from where it began is exactly
+"drawn a tile back, then snaps forward". It only shows on a run long enough to
+re-run the race several times, which is why the corridor and not a corner, and
+why never in a headless browser whose timers are clean.
+
+Under `prefers-reduced-motion` it was not even a race. The hold dropped to 240ms
+and the walk stayed at its full length, so the transition lost **every** time.
+
+The rule is now stated instead of hoped for: `walkMs(event, reduced)` is always
+strictly less than `holdMs(event, reduced)`, and a unit test asserts it for all
+ten events in both motion settings. Planted twice — once by making walk equal
+hold again, once by leaving reduced motion out of the walk — three and two
+checks go red respectively. Measured after: each corridor step now covers its
+tile in ~241ms and stands still for ~96ms before the next.
+
+**What this was not**, ruled out by measurement rather than by argument: the
+trace (13 frames, monotone along the corridor), the rendered position (sampled
+on every painted frame at 1x, 6x and 20x CPU throttling — zero backward steps),
+the tile size, five viewports, two pixel ratios and both orientations.
+
+308 unit tests (was 302), 228 fast, 145 full.
 
 ## 2026-08-26 — Robby was not teleporting; the room was resizing under him
 

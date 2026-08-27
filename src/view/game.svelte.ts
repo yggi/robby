@@ -23,23 +23,38 @@ export const DUR: Record<FrameEvent, number> = {
   bonk: 980, shrug: 1000, stranded: 1200, win: 2600,
 }
 
+/** Reduced motion holds every frame for the same short beat. */
+const REDUCED_HOLD = 240
+export const holdMs = (e: FrameEvent, reduce = false) => (reduce ? REDUCED_HOLD : DUR[e])
+
 /**
- * How long the *walk* takes, which is not the same thing as how long the frame
- * is held — and used to be, because one number did both jobs.
+ * How long the *walk* takes — which is not how long the frame is held, and used
+ * to be, because one number did both jobs.
  *
- * A robot crossing one tile always crosses it at a walk. Held frames are held
- * so that something can be *watched*: the bubble ticking a part off, the rocket
- * shuddering him away. Spending that time on the movement instead meant he
- * never stood still to be watched — he crawled into the battery tile over a
- * second and a sixth, with a long easing tail, and then snapped straight into
- * the next move. On the Lab finale, where the next move doubles back the way he
- * came, that reads as him lurching and being yanked backwards.
+ * Two things went wrong with that, and they compound.
  *
- * So: the walk is a walk, the hold is what is left over, and he spends it
- * standing on the tile with the thing that just happened.
+ * **A held frame was spent walking.** Held frames exist so that something can be
+ * *watched*: the bubble ticking a part off, the rocket shuddering him away. With
+ * one number he never stood still to be watched — he crawled into the battery
+ * over 1150ms, decelerating the whole way, then snapped into the next move. In
+ * the Lab finale that next move doubles back the way he came.
+ *
+ * **And an ordinary step was a race.** The walk was 380ms and the frame was held
+ * 380ms, so the CSS transition ended at the very instant it was retriggered.
+ * Which side won came down to timer jitter, and on a long straight run — four
+ * tiles bought by one instruction, no pause between them — it was re-run every
+ * frame. An interrupted `translate` transition that restarts from where it began
+ * is drawn a tile back and then snaps forward. Under `prefers-reduced-motion` it
+ * was not even a race: the walk was longer than the hold, always.
+ *
+ * So the rule is now stated rather than hoped for: **the walk always finishes
+ * before the frame does.** He arrives, settles, and then sets off again.
  */
-const WALK_MS = 380
-export const walkMs = (e: FrameEvent) => Math.min(e === 'carry' ? 210 : WALK_MS, DUR[e])
+export const walkMs = (e: FrameEvent, reduce = false) => {
+  const hold = holdMs(e, reduce)
+  // a belt is quicker than a walk: he is not walking, he is being whisked along
+  return Math.min(e === 'carry' ? 180 : 340, Math.round(hold * 0.9))
+}
 
 /** The robot walking itself back to the start after a failure. */
 const RETURN_MS = 820
@@ -187,7 +202,9 @@ export function createGame() {
   const celebrating = $derived(frame?.event === 'win')
   const won = $derived(celebrating || (!running && playhead >= 0 && trace.outcome === 'win'))
   // `--step` drives the robot's translate, so it is the *walk*, not the hold
-  const stepMs = $derived(returning ? RETURN_MS : frame ? walkMs(frame.event) : 380)
+  const stepMs = $derived(
+    returning ? RETURN_MS : frame ? walkMs(frame.event, reduced()) : 340,
+  )
   const lastOfChapter = $derived(li === chapter.levels.length - 1)
   /**
    * Where a finished world hands over to. Never into rooms a child built —
@@ -525,7 +542,7 @@ export function createGame() {
       zoom = 2 // push in on the celebration
       focus = { ...f.state.pos }
     }
-    timer = setTimeout(tick, reduced() ? 240 : DUR[f.event])
+    timer = setTimeout(tick, holdMs(f.event, reduced()))
   }
 
   function play() {

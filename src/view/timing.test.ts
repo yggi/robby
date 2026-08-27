@@ -1,37 +1,54 @@
 import { describe, expect, it } from 'vitest'
-import { DUR, walkMs } from './game.svelte'
-import { FrameEvent } from '../engine/types'
+import { DUR, holdMs, walkMs } from './game.svelte'
+import { type FrameEvent } from '../engine/types'
+
+const EVENTS = Object.keys(DUR) as FrameEvent[]
 
 /**
  * `DUR` is how long a frame is *held*; `walkMs` is how long the robot takes to
- * cross the tile. They were one number, so a frame held for something to be
- * watched spent that time on the movement instead — he crawled into the battery
- * over 1150ms with a long easing tail and never stood still on it, then snapped
- * into the next move. In the Lab finale the next move doubles back the way he
- * came, which is what made it read as a lurch backwards.
+ * cross the tile. They were one number, and it cost two bugs at once.
  */
 describe('the walk and the hold are different clocks', () => {
-  it('never walks slower than a walk, whatever the frame is held for', () => {
-    const events = Object.keys(DUR) as FrameEvent[]
-    expect(events.length).toBe(10)
-    for (const e of events) expect(walkMs(e)).toBeLessThanOrEqual(380)
+  it('checks every event there is', () => {
+    expect(EVENTS.length).toBe(10)
+  })
+
+  /**
+   * The one that matters. A CSS transition that ends at the very instant it is
+   * retriggered is a race, and on a straight run — four tiles bought by one
+   * instruction, no pause between them — it is re-run every frame. Whichever
+   * side wins comes down to timer jitter; when the transition loses it restarts
+   * from where it began, which is drawn a tile back and then snapped forward.
+   */
+  it('the walk always finishes before the frame does — never a race', () => {
+    for (const e of EVENTS) {
+      expect(walkMs(e), `${e} at rest`).toBeLessThan(holdMs(e))
+      expect(walkMs(e, true), `${e} with reduced motion`).toBeLessThan(holdMs(e, true))
+    }
+  })
+
+  it('and never walks slower than a walk, whatever the frame is held for', () => {
+    for (const e of EVENTS) expect(walkMs(e)).toBeLessThanOrEqual(340)
   })
 
   it('so a held frame is time spent standing still, not creeping', () => {
-    // the three that are held for something to be watched
-    for (const e of ['pickup', 'denied', 'gate'] as const) {
-      expect(DUR[e]).toBeGreaterThan(walkMs(e))
-      expect(walkMs(e)).toBe(380)
-    }
+    for (const e of ['pickup', 'denied', 'gate'] as const)
+      expect(DUR[e] - walkMs(e)).toBeGreaterThan(100)
     expect(DUR.pickup - walkMs('pickup')).toBeGreaterThan(700) // a beat worth watching
   })
 
-  it('and a belt still whisks him along faster than he walks', () => {
-    expect(walkMs('carry')).toBe(210)
+  it('a belt still whisks him along faster than he walks', () => {
     expect(walkMs('carry')).toBeLessThan(walkMs('step'))
   })
 
-  it('an ordinary step is held exactly as long as it takes', () => {
-    expect(walkMs('step')).toBe(DUR.step)
+  /**
+   * Reduced motion holds every frame for 240ms while the walk stayed at its full
+   * length — so there the transition was not racing the retrigger, it was losing
+   * to it every single time.
+   */
+  it('and reduced motion shortens the walk with the hold, not just the hold', () => {
+    expect(walkMs('step', true)).toBeLessThan(walkMs('step'))
+    expect(walkMs('step', true)).toBeLessThan(REDUCED)
   })
 })
+const REDUCED = 240
