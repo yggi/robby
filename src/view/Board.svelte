@@ -11,8 +11,7 @@
   import { celebrate, exhaust, pickup, puff } from './particles'
   import { nextStroll, routesFrom } from './roam'
 import { propsFor, scatterProps } from './props'
-  import { sfx } from './audio'
-import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG, THICKET_SVG } from './icons'
+import { BOT_SVG, CAT_SVG, itemIcon, ROCKET_SVG, STRANDS_SVG, THICKET_SVG } from './icons'
 
   let { g }: { g: Game } = $props()
   const level = $derived(g.level)
@@ -308,7 +307,9 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
       if (botEl) flyBits(botEl.getBoundingClientRect(), g.reward, g.collectBit)
     }
     if (e === 'pickup') pickup(boardEl, st.pos.x, st.pos.y)
-    if (shortHanded) sfx.denied()
+    // arriving short is `denied` in the trace now, and `tick()` looks a frame's
+    // sound up by its event name — so the buzz is wired by the engine saying
+    // what happened, rather than by the board noticing where he is standing
   })
 
   $effect(() => {
@@ -411,7 +412,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
         style="--x:{item.at.x}; --y:{item.at.y}"
       >
         <span class="cellwrap">
-          {@html item.kind === 'battery' ? BATT_SVG : PART_SVG[item.kind] ?? KEY_SVG}
+          {@html itemIcon(item.kind)}
         </span>
       </div>
     {/each}
@@ -434,7 +435,7 @@ import { BATT_SVG, BOT_SVG, CAT_SVG, KEY_SVG, PART_SVG, ROCKET_SVG, STRANDS_SVG,
         <span class="think" class:short={shortHanded}>
           {#each needs as n (n.kind)}
             <i class="want" class:got={n.got}>
-              {@html n.kind === 'battery' ? BATT_SVG : PART_SVG[n.kind] ?? KEY_SVG}
+              {@html itemIcon(n.kind)}
             </i>
           {/each}
           {#if wantsRocket}

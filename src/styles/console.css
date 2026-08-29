@@ -14,6 +14,43 @@
   border-radius: 2px; background: linear-gradient(90deg, transparent, #ffffff20, transparent);
 }
 
+/* ---- turned sideways ----
+   A phone held in landscape has width to spare and almost no height, and the
+   console is the thing standing in the board's way: it is content-sized, it
+   never shrinks, and stacked under the board it took ~174px of a 390px window.
+   So it goes beside the board instead — the same console, the same strip,
+   tokens and circle at the same sizes, stood on its end. The world gets the
+   height back, which is the axis it was starving on.
+
+   Only on short landscape windows: a tablet on its side has room for both, and
+   `--c` is capped at 66px there anyway, so the stack is still right.
+
+   The rule lives here rather than in base.css because the console is what
+   moves; being later in the cascade is what lets it beat `.screen.ingame`. */
+@media (orientation: landscape) and (max-height: 620px) {
+  .screen.ingame {
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr min(38vw, 300px);
+  }
+  .screen.ingame > .gamebar { grid-column: 1; grid-row: 1; }
+  .screen.ingame > .scene { grid-column: 1; grid-row: 2; }
+  .console {
+    grid-column: 2; grid-row: 1 / -1;
+    align-content: center;
+    border-top: 0; border-left: 2px solid #ffffff14;
+    border-radius: 26px 0 0 26px;
+    box-shadow: -16px 0 34px #00000066;
+    /* the notch is on a side now, not the top */
+    padding: 14px calc(14px + env(safe-area-inset-right)) 14px 14px;
+  }
+  .console::before { top: 14%; bottom: 14%; left: 4px; right: auto; width: 2px; height: auto;
+    background: linear-gradient(180deg, transparent, #ffffff20, transparent); }
+  .strip { max-width: 100%; }
+  .controls { flex-direction: column; gap: 14px; }
+  .tray { display: grid; grid-template-columns: repeat(2, auto); }
+  .gamebar { padding-left: calc(12px + env(safe-area-inset-left)); }
+}
+
 .pips { display: flex; gap: 8px; align-items: center; }
 .pip { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0;
        background: #ffffff24; cursor: pointer; transition: 220ms; }

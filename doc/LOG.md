@@ -17,6 +17,312 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-27 — a cue scheduled on the frame the camera settles
+
+Reported: jitter or stutter at the end of the zoom-in, *"e.g. when reaching the
+rocket"*. That parenthesis turned out to be the whole clue.
+
+Winning starts a 900ms camera push-in — a CSS transition on `.board` and
+`.decor`. And `tick()` had, on the win frame:
+
+```js
+if (level.goal.type === 'exit') setTimeout(() => sfx.launch(), 900)
+```
+
+**900ms, the camera's duration to the millisecond**, and only on rocket rooms,
+because only they have that cue. So every win on a rocket room synthesised three
+oscillators on the exact frame the push-in came to rest — and a scale animation
+is at its most expensive precisely as it settles, because that is when the
+browser re-rasterises the scaled content at its new size. Two of the heaviest
+frames in the game, deliberately stacked.
+
+It is the same mistake as the walk that ended when its own frame was retriggered,
+one layer up: two clocks written as the same constant, colliding because nothing
+said they must not. `CAMERA_MS` names the duration, `afterCamera()` is the only
+way to schedule against it, and it leaves 260ms.
+
+Two checks, both planted: a unit test that `afterCamera()` clears the camera by
+more than a rounding margin (fails when the gap is removed), and a smoke check
+that reads **both** camera transitions back out of the built stylesheet and
+fails when the CSS and the code's copy disagree — planted by slowing the CSS to
+1200ms. It reads seconds, because the minifier writes `900ms` as `.9s`.
+
+### What did not survive measurement
+
+- **Layer churn.** `will-change: transform` on `.board`, on the theory that the
+  compositor was promoting and demoting around the transition: no change to the
+  frame profile at all. Not shipped.
+- **The celebration colliding with the camera's first frame.** Winning builds
+  forty confetti spans, three shock rings, the rays, a full-board flash and the
+  flying coins, all in the frame the zoom starts — a measured 31–50ms spike,
+  every run, at both pixel ratios. Deferring the whole burst by one frame was
+  tried and **moved the spike without shrinking it**, so it was reverted rather
+  than shipped with a comment claiming a benefit it did not have. The spike is
+  real and still there; it is the cost of painting forty-five new animated nodes,
+  and reducing it means reducing them, which is a design decision rather than a
+  bug fix.
+- **The end of the zoom itself**, in this environment: 17ms frames across five
+  runs at DPR 1 and DPR 3, with no main-thread long tasks anywhere. Headless
+  Chromium has no GPU here, so it cannot show a raster hitch; the fix above was
+  found by reading the schedule, not by reproducing it.
+
+310 unit tests (was 308), 230 fast checks (was 228), 145 full.
+
+## 2026-08-26 — the walk and the hold were one number
+
+Follow-up on the teleport report, which was **not** fixed by the placement
+change: it still happened, deterministically, twice in the Lab finale.
+
+Launch Bay is `#R....#@#` over `#####.#.#` over `#####...#` over `#####*###` —
+right along the corridor, down to the battery at (5,4), **back up one tile**,
+then right and up to the rocket. Its two notable moments are a direction change
+and a pickup, which is what the report named.
+
+Measured again, this time across five viewports and pixel ratios and both
+orientations: largest single-sample move 0.118 tiles, no reversal anywhere. So
+the rendered position is not jumping. What *is* wrong is the speed:
+
+```
+moving 2400-2674ms  covering 0.60 tiles      into the battery — a lunge
+moving 2688-3009ms  covering 0.33 tiles      then a long easing crawl
+  ...tiny flickers, never a full stop...
+moving 3520-3793ms  covering 0.99 tiles      and straight back up
+```
+
+`DUR` says in its own comment that it is *how long each frame is held*, and its
+own pickup entry says the hold is there because "the bubble ticking over is
+worth watching". But the same number was fed to `--step`, which is the CSS
+transition on the robot's `translate` — so the hold was spent on the *movement*.
+He never stood on the battery to be watched: he crawled onto it over a second
+and a sixth, decelerating the whole way, and then snapped into a move that goes
+**back the way he came**. A lurch, then a yank backwards, in the one room whose
+answer doubles back.
+
+`walkMs(event)` is the walk now — never more than 380ms, 210 for a belt —
+and `DUR` stays the hold. Same room after:
+
+```
+moving 2384-2595ms  covering 0.94 tiles      walks in
+still  2704-3536ms  (832ms)                  stands on it while the bubble ticks
+moving 3536-3794ms  covering 0.98 tiles      walks back up
+```
+
+Which is what the comment always said it wanted. It also fixes `denied` (added
+this morning, 900ms) and `gate`/`collapse`, all of which stretched the walk.
+
+Four unit tests, planted by making the two one number again — two of them go red.
+
+### The second one was a race, and asking pinned it
+
+The first fix explained the battery. The other moment was reported as *along the
+top corridor*, and as a real discontinuity — "for a moment he is genuinely
+somewhere he has already been, then he jumps forward to catch up".
+
+The corridor is four tiles bought by **one instruction**: four back-to-back
+`step` frames with no pause anywhere in them. And the walk was 380ms while the
+frame was held 380ms — **the CSS transition ended at the very instant it was
+retriggered**. Which side wins is timer jitter, and a transition that loses is
+interrupted rather than finished; restarting from where it began is exactly
+"drawn a tile back, then snaps forward". It only shows on a run long enough to
+re-run the race several times, which is why the corridor and not a corner, and
+why never in a headless browser whose timers are clean.
+
+Under `prefers-reduced-motion` it was not even a race. The hold dropped to 240ms
+and the walk stayed at its full length, so the transition lost **every** time.
+
+The rule is now stated instead of hoped for: `walkMs(event, reduced)` is always
+strictly less than `holdMs(event, reduced)`, and a unit test asserts it for all
+ten events in both motion settings. Planted twice — once by making walk equal
+hold again, once by leaving reduced motion out of the walk — three and two
+checks go red respectively. Measured after: each corridor step now covers its
+tile in ~241ms and stands still for ~96ms before the next.
+
+**What this was not**, ruled out by measurement rather than by argument: the
+trace (13 frames, monotone along the corridor), the rendered position (sampled
+on every painted frame at 1x, 6x and 20x CPU throttling — zero backward steps),
+the tile size, five viewports, two pixel ratios and both orientations.
+
+308 unit tests (was 302), 228 fast, 145 full.
+
+## 2026-08-26 — Robby was not teleporting; the room was resizing under him
+
+Reported: *sometimes Robby jumps back and forward in his path, teleporting one
+or two tiles back.* Fixed, and the hunt is the interesting part.
+
+**It did not reproduce.** Every shipped room — all 41 — driven at its own par in
+Chromium with the rendered position sampled at 16ms, plus wrong programs (so the
+bonk, the shrug and the walk home), plus reduced motion, plus replay,
+stop-mid-run and the endless room. Zero reversals, zero teleports, tile size
+stable throughout. The trace cannot go backwards either: every frame's
+`state.pos` is its own `to`, and consecutive `to`s differ by at most one tile.
+
+**What every one of those runs had in common was a viewport that never moved.**
+Robby and Funke are the only board elements that transition `translate`, and the
+position was written `calc(var(--x) * var(--c))` — *pixels*. So when `--c`
+changed, every tile jumped to the new size instantly and the two of them
+**animated** to it, because in pixels a resize is indistinguishable from a move.
+Resizing mid-step, measured with the same instrument:
+
+```
+944ms  model (6,1)  drawn (5.82, 1.00)  tile 45px   normal mid-step lag
+964ms  model (6,1)  drawn (7.57, 1.29)  tile 35px   1.60 tiles adrift
+        ... slides back over the next ~130ms
+```
+
+That is the report exactly. On a phone it needs no deliberate resize: the address
+bar hiding is one, and so is a rotation.
+
+**The fix is one word in one shared rule.** Every element in that rule is exactly
+one tile square, so `calc(var(--x) * 100%)` is the same position — but the
+computed value is `600% 100%`, which does not change when the tile size does. A
+resize stops being a move, so there is nothing to animate; measured after: never
+more than the 1.00-tile lag that *is* the animation. Four rules changed
+(`.tile/.over/.item/.bot/.launchpad/.propcell/.fx`, `.cat` with her trailing
+offsets, `.vec`, the editor's `.hint`), and every element verified to land on its
+model coordinate afterwards, Funke still at her deliberate +0.17/+0.21.
+
+A smoke check now scrapes every placement rule, asserts there are four, and fails
+if any is in pixels — planted and watched to fail.
+
+**Not a regression from the container-query work**, though it was reached through
+it: `--c` came off `100dvh` before, which the address bar changes just as
+readily. Older than this branch.
+
+228 fast checks (was 226), 302 unit, 145 full.
+
+## 2026-08-26 — open up the editor, and make landscape an orientation
+
+Cards: [R-003] closed. [R-005] half-answered and rewritten. [R-030] and [R-031]
+opened from what was measured.
+
+Seven asks from one session with the game on a phone, six of them about the
+editor and one about the orientation it was held in.
+
+**Landscape was broken, not squashed.** `.board` and `.egrid` each sized a tile
+by subtracting a constant from the window height — `100dvh - 366px`,
+`100dvh - 340px` — standing in for the gamebar and the console. A constant does
+not scale: 43% of an 844px portrait window, **94%** of the same phone turned
+sideways. Below ~366px of window it went negative, and `width: calc(w * -4px)`
+is an invalid declaration, so the board *and every absolutely-positioned tile
+in it* fell back to `auto`. There was not one orientation query in the repo.
+Both now measure — `.scene` and `.canvas` are `container-type: size` and the
+sizes come off `100cqw`/`100cqh` with a `max()` floor — and on short landscape
+windows the console stands beside the board rather than under it, the editor's
+tray/tools/themes likewise as a rail. The rail is held by a wrapper that is
+`display: contents` in portrait, so portrait's rows are untouched.
+
+**Two bugs fell out of that.** The editor's grid column was `auto`, so it
+stretched to the tools row — five brushes, play and keep are wider than a 390px
+phone — and once the grid measured its own box instead of the window it
+inherited the overflow. `minmax(0, 1fr)` and a wrapping tools row fix a
+clipping that was already shipping. And `viewport-fit=cover` was set with only
+top and bottom insets handled, so a notch ate the console sideways.
+
+**Robby left `Draft.cells`.** He was a map character, which is why `paint()` had
+to refuse his tile — painting him would have deleted him. `Draft.start` holds
+him now. Three things stopped being special cases: the floor under him paints,
+moving him no longer writes bare floor over the tile he was on (it did, silently
+eating a conveyor every time), and he can be put down anywhere including a wall,
+which the room *says* rather than refusing the drop. The save format did not
+move: `draftMap()` writes `R` back at `start`, and a room only saves when the
+ground under him is plain floor, so the character it replaces is the `.` it
+already means. `draftFrom()` is the inverse, and replacing the one hand-written
+copy of it in `game.svelte.ts` fixed a live bug — editing a saved room was
+dropping its tray.
+
+**The gesture grammar came from the ask, verbatim, and it is better than what
+was there.** Hold to pick a thing up, leave the tile to draw a trail, tap to
+paint — and a tap turns a conveyor or changes an object only under the tool that
+made it. What that buys: terrain became terrain. Belts and bridges used to be
+carryable, not by decision but by accident of `grab` being "anything that is not
+`#` or `.`", and the cost of that was that **no brush could overdraw one** — a
+press picked it up instead. Nothing is committed on `pointerdown` any more; the
+press starts a timer and records the origin, and which of the three gestures it
+was is only knowable later.
+
+Mid-gesture the grid renders `move(draft, from, hover)` — the draft the release
+will produce — rather than a second rendering path that has to agree with the
+first. That is what makes the carried piece ride under the finger. Dragging
+Robby used to move nothing at all: `.lifted` dimmed the tile and he stayed put.
+
+**The battery brush is an object brush.** One button walking a ring — battery,
+cog, coil, core, rocket — cycled by tapping the tool tile it already is, which
+also gives a conveyor its direction *before* it is painted rather than after
+three taps on the grid. `goalFor()` derives the goal from the room and is asked
+by both `assess()` and `playable()`; had only the first asked, a saved errand
+room would have come back a collect room and been played at a par that is not
+true. Two battery-only assumptions went with it: the editor rendered
+`item === 'battery'` and nothing else, so a cog in a draft parsed, changed the
+answer and **drew nothing**, and `itemIcon()` now holds the ternary all three
+callers were writing out.
+
+**The verdict left the bar and went into Robby's thought bubble.** It was an
+English sentence — "needs robot and battery" — under the grid of the one game
+whose brief is that the player cannot read. Four states, each a thing shown:
+thinking, nothing to fetch, not on solid ground, no way through. `Verdict`'s
+`needs: string[]` went with the bar that printed it. Only the par stays a
+number, and that is for the adult. The bubble is the same `.think` he thinks in
+while playing, sized off `--c`, which the editor already supplies.
+
+**The rocket's refusal is a frame now.** Arriving short was a complete no-op in
+the engine — `satisfied()` returned false and he drove across — so the shudder
+the view already had (520ms×2) was cut off by the next 380ms step. A `denied`
+`FrameEvent`, set on the arrival frame, holds it for 900ms; `DUR` is
+`Record<FrameEvent, number>` so the compiler demanded the duration, and `tick()`
+looks a frame's sound up by name, so `sfx.denied` wired itself and the ad-hoc
+`if (shortHanded) sfx.denied()` in `Board.svelte` could be deleted. No outcome
+changes, so no shipped par moved — which is the acceptance test, and it is run
+on every suite. Measured in Chromium: the pad now turns him away for 1825ms.
+
+**The whole 9×7 is editable.** `inside()` reserved a wall border, leaving a 7×5
+interior that nothing on screen distinguished from a paintable one. Renamed to
+`within()` so a caller wanting the old meaning fails to compile.
+
+### What was measured rather than assumed
+
+The solver cost of opening the ring, because open space is what makes `solve()`
+expensive and the editor solves on every finished stroke:
+
+| wide-open room | `assess()` |
+|---|---|
+| 9×7 (the editor's size) | **650–770ms** |
+| 9×9 | 917ms |
+| 11×7 | 1175ms |
+| 11×9 (`MAX_W`×`MAX_H`) | **2547ms** |
+
+The dedup on world state is what stops it exploding — the frontier is bounded by
+distinct states, not by 4^depth. 9×7 is fine behind the spinner the editor
+already shows. **11×9 is not**, and `MAX_W`/`MAX_H` permit it today, which is
+[R-005]'s real constraint and is now written into the test that fails on it.
+
+### Rejected, and why
+
+- **Free pixel-following for the carried piece.** Cell-snapping is honest to a
+  tile game, needs no second positioning system, and re-uses `--x`/`--y`/`--c`
+  like everything else on the board. The piece is visibly under the finger
+  either way.
+- **Refusing to drop Robby on a wall.** A refused drop is a thing that has to be
+  explained; a room that says *he is not standing on anything* is a thing that
+  can be seen. Same argument as the red outline over the bin.
+- **A wider landscape rail (44vw).** Tried, to stop the save button wrapping to
+  its own line at 640px. It cost the grid 40px and the button wrapped anyway.
+
+### Two things a check could not have told us
+
+`git checkout` on one file, to undo a planted fault, took the whole rewrite of
+`Editor.svelte` with it — the plant had been applied on top of uncommitted work.
+Rewritten from context, but the lesson is cheap: **plant faults on a committed
+tree, or with a copy beside you.** The two plants either side of it used `cp` to
+a scratch file and cost nothing.
+
+And the duplicate-selector guard read the stylesheet flat, so the first
+landscape block looked like eight stale blocks. It cuts the sheet into scopes
+now — top level, and each `@media` body — because *within* a scope a repeated
+selector is still the fault it was written for, proven by planting one.
+
+287 → **302** unit tests, 199 → **226** fast checks, **145** full. Driven in
+Chromium at 390×844, 844×390 and 640×360.
+
 ## 2026-08-26 — end the collision category
 
 Cards: [R-013], [R-010] and [R-026] closed. [R-023] closed on the way past.

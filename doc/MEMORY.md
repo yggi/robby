@@ -188,6 +188,29 @@ as the robot moves.
 The editor works by supplying its own `--c`, which is why it renders with the
 board's real tiles rather than a set of its own.
 
+**`--c` is measured, never assumed.** `.scene` and `.canvas` are
+`container-type: size`, and the tile comes off `100cqw`/`100cqh` — the room the
+board genuinely has — with a `max()` floor. It used to subtract a constant from
+`100dvh` standing in for the console and the gamebar, which is 43% of a tall
+window and 94% of a short one; below ~366px of window it went negative, and an
+invalid `width` took the board and every tile in it back to `auto`. **Do not
+put a viewport unit back into that formula**; a smoke check scrapes both rules
+and fails if one appears.
+
+**Position is a percentage of a tile, never `--x * var(--c)`.** Every element
+in that sizing rule is exactly one tile square, so `calc(var(--x) * 100%)` is
+the same place — but the computed value is `600% 100%`, which does not change
+when the tile size does. `.bot` and `.cat` are the only board elements that
+*transition* `translate`, and in pixels a resize was indistinguishable from a
+move: the room snapped to the new tile size while Robby animated to it, so he
+appeared to teleport a tile or two and slide back. A smoke check scrapes every
+placement rule and fails on a pixel one.
+
+**Landscape reflows rather than shrinking.** On short landscape windows the
+console stands beside the scene and the editor's tray, tools and themes become a
+rail — held by a wrapper that is `display: contents` in portrait, so portrait's
+rows are untouched. Nothing changes size; the furniture stands on its end.
+
 ## 8. Persistence
 
 Five keys in `localStorage`, all guarded by try/catch (jsdom refuses them on an

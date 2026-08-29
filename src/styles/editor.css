@@ -5,6 +5,12 @@
 .editor {
   position: relative; height: 100dvh; overflow: hidden; color: var(--chalk);
   display: grid; grid-template-rows: auto 1fr auto auto auto;
+  /* `minmax(0, …)`, not `1fr`: an auto grid column is as wide as its widest
+     item, and the tools row — five brushes, play and keep — is wider than a
+     small phone. The column stretched to fit it and everything in it inherited
+     the overflow, the grid included, once the grid started measuring the box
+     it is in rather than the window. Constrain the column and the row wraps. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px; padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
   background: var(--bg);
 }
@@ -12,15 +18,57 @@
 .editor .roomsbar, .editor .canvas, .editor .verdict,
 .editor .tools, .editor .themepick { position: relative; z-index: 2; }
 .editor .roomsbar { margin: 0; }
+/* The tray, the tools and the themes are one thing — a rail — and in portrait
+   that rail is exactly the rows they were already in. `display: contents` is
+   what lets landscape move all three at once without portrait noticing. */
+.erail { display: contents; }
 
-.canvas { display: grid; place-items: center; min-height: 0; }
+/* ---- turned sideways ----
+   The same move the console makes (`console.css`): everything that is not the
+   grid goes beside it, so the grid gets the height back. Before this the
+   editor's own constant — `100dvh - 340px` — left a sideways phone about seven
+   pixels a cell, which is smaller than the fingertip drawing on it. */
+@media (orientation: landscape) and (max-height: 620px) {
+  .editor {
+    grid-template-rows: auto 1fr;
+    grid-template-columns: minmax(0, 1fr) min(40vw, 300px);
+    padding-left: calc(14px + env(safe-area-inset-left));
+    padding-right: calc(14px + env(safe-area-inset-right));
+  }
+  .editor .roomsbar { grid-column: 1 / -1; }
+  .canvas { grid-column: 1; grid-row: 2; }
+  .erail {
+    display: grid; grid-column: 2; grid-row: 2;
+    align-content: center; justify-items: center; gap: 10px;
+    /* the last resort, and it should never be reached: a control a child
+       cannot get to is worse than a rail that scrolls */
+    min-height: 0; overflow-y: auto;
+  }
+  /* five brushes will not sit in one row of a 320px rail, so they sit in two,
+     and the four arrow counts pair up rather than leaving one on its own */
+  .erail .paints { display: grid; grid-template-columns: repeat(3, auto); }
+  .erail .trayedit { display: grid; grid-template-columns: repeat(2, auto); }
+  .erail .tools { gap: 10px; }
+  /* A sideways phone is ~360px tall and the rail has to hold all of it. Every
+     target stays well over the 44px a thumb needs; what goes is the air. */
+  .erail .paint { width: 46px; height: 46px; border-radius: 13px; }
+  .erail .play { width: 54px; height: 54px; }
+  .erail .keep { width: 46px; height: 46px; border-radius: 13px; }
+  .erail .tchip { width: 28px; height: 28px; border-radius: 9px; }
+  .erail .trayslot button { width: 24px; height: 28px; }
+}
+
+/* a size container, so the grid can be told how much room it has rather than
+   working it out from a constant — see the long note on `--c` in world.css */
+.canvas { display: grid; place-items: center; min-height: 0; container-type: size; }
 /* `egrid`, not `grid`: the level select already owns `.grid` for its tile
    layout, and two screens can be in the DOM together during a cross-fade. */
 .egrid {
   position: relative;
-  --gc: min(52px, calc((100vw - 44px) / var(--gw)), calc((100dvh - 340px) / var(--gh)));
-  --gc: round(down, min(52px, calc((100vw - 44px) / var(--gw)),
-                        calc((100dvh - 340px) / var(--gh))), 1px);
+  --gc: max(14px, min(52px, calc((100cqw - 16px) / var(--gw)),
+                      calc((100cqh - 12px) / var(--gh))));
+  --gc: round(down, max(14px, min(52px, calc((100cqw - 16px) / var(--gw)),
+                                  calc((100cqh - 12px) / var(--gh)))), 1px);
   /* the board's tiles are placed with --c, so the editor simply supplies one */
   --c: var(--gc);
   width: calc(var(--gw) * var(--gc));
@@ -40,16 +88,43 @@
 
 
 
-.verdict {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 30px; font-size: 15px; color: var(--chalk); opacity: .75;
+/* ---- the verdict, in Robby's own thought bubble ----
+   It used to be a sentence under the grid: "needs robot and battery", "Robby
+   can't get there". Words, in the one game whose entire brief is that the
+   player cannot read them. The bubble is the one he already thinks in while a
+   room is being played, so an unfinished room is him wanting something — which
+   is a thing he has always known how to say. Only the par stays a number, and
+   that is for the adult reading over a shoulder. */
+.egrid .think { pointer-events: none; }
+/* the answer, once there is one: an arrow and how many of them */
+.egrid .think.good { background: #eaf7ef; }
+.want.lit { filter: none; opacity: 1; }
+.want.lit svg { fill: var(--go); }
+.par {
+  font-size: calc(var(--c) * .42); font-weight: 800; line-height: 1;
+  color: #1f6b4a; padding: 0 calc(var(--c) * .04);
 }
-.verdict.good { color: var(--go); opacity: 1; }
-.verdict .dots { letter-spacing: 3px; opacity: .6; }
-.verdict .gearspin { width: 20px; height: 20px; border-width: 5px; }
+/* he is standing on something that is not floor: what he wants is ground */
+.want.ground {
+  border-radius: 22%; background: var(--floor);
+  box-shadow: inset 0 0 0 2px #00000024, 0 2px 0 var(--edge);
+  filter: none; opacity: .9;
+}
+/* there is a way in principle and he cannot find one inside the depth we
+   search — the same `?` he wears when a program runs out under him */
+.want.lost {
+  font-size: calc(var(--c) * .4); font-weight: 800; line-height: 1;
+  color: #b8543f; filter: none; opacity: 1;
+}
+.egrid .gearspin { width: calc(var(--c) * .46); height: calc(var(--c) * .46); }
+.egrid .gearspin i { width: 100%; height: 32%; background: #6f7683; }
+.egrid .gearspin::after { inset: 22%; background: #f6f2e8; box-shadow: 0 0 0 3px #6f7683; }
 
-.tools { display: flex; align-items: center; justify-content: center; gap: 14px; }
-.paints { display: flex; gap: 8px; }
+.tools {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; flex-wrap: wrap;
+}
+.paints { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .paint {
   width: 54px; height: 54px; border: 0; border-radius: 15px; padding: 0;
   background: var(--console2); box-shadow: 0 4px 0 #0e1117, inset 0 1px 0 #ffffff1a;
@@ -98,18 +173,24 @@
 .elayer.floors { filter: drop-shadow(0 4px 0 var(--edge)) drop-shadow(0 8px 12px #00000047); }
 .hint {
   position: absolute; width: var(--c); height: var(--c);
-  translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c));
+  /* a percentage of its own tile, like every board element — see world.css */
+  translate: calc(var(--x) * 100%) calc(var(--y) * 100%);
 }
 .hint::before {
   content: ''; position: absolute; inset: 3px; border-radius: 6px;
   box-shadow: inset 0 0 0 1px #ffffff14;
 }
 .hint.filled::before { box-shadow: none; }
-.egrid .over.lifted { opacity: .35; }
-.egrid .over.target::after {
-  content: ''; position: absolute; inset: 2px; border-radius: 8px;
-  box-shadow: inset 0 0 0 3px var(--gold);
+/* ---- a thing that has been picked up ----
+   It rides under the finger rather than staying where it was: the piece itself
+   moves, cell by cell, because the draft being rendered mid-gesture is the
+   draft the release will produce. Dragging Robby used to move nothing at all —
+   the tile under him dimmed and he stayed put. */
+.egrid .carried {
+  z-index: 8; scale: 1.18;
+  filter: drop-shadow(0 calc(var(--c) * .12) calc(var(--c) * .1) #00000073);
 }
+.egrid .carried .think { display: none; }
 .routedot {
   position: absolute; width: 24%; height: 24%; border-radius: 50%;
   background: var(--go); opacity: .8;

@@ -106,6 +106,15 @@ export const PART_SVG: Record<string, string> = {
     <path d="M20 4 L20 36" stroke="#c8ffe0" stroke-width="1.6" opacity=".6"/></svg>`,
 }
 
+/**
+ * The picture for a thing lying on the floor. Three callers were each writing
+ * out the same ternary — battery, else a part, else the key — and the editor's
+ * copy had been narrowed to batteries only, so a cog in a draft parsed, changed
+ * the answer, and drew nothing at all.
+ */
+export const itemIcon = (kind: string) =>
+  kind === 'battery' ? BATT_SVG : PART_SVG[kind] ?? KEY_SVG
+
 /** Vines across a way that is shut for good. */
 export const THICKET_SVG = `
 <svg class="thicket-svg" viewBox="0 0 100 100" aria-hidden="true">

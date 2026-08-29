@@ -5,6 +5,9 @@
   display: grid; place-items: center;
   background: var(--bg);
   transition: background 700ms;
+  /* The board is sized from this box rather than from a guess about how much
+     of the window the console has taken. See the note on `--c` below. */
+  container-type: size;
 }
 .scene::after {
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
@@ -23,15 +26,30 @@
 
 .board {
   position: relative; z-index: 2;
-  /* Whole pixels, deliberately. A fractional tile size puts every tile boundary
+  /* One tile, from the box the board is actually standing in.
+     ------------------------------------------------------------------
+     This used to read `(100dvh - 366px) / var(--h)` — the height of the
+     window, less a constant standing in for the gamebar and the console. The
+     constant does not scale, so the share of the window it claimed grew as the
+     window got shorter: 43% of an 844px portrait phone, and 94% of the same
+     phone turned sideways, which left the board four pixels a tile. Below
+     366px of window it went *negative*, `width: calc(w * -4px)` is an invalid
+     declaration, and the board and every absolutely-positioned tile in it fell
+     back to `auto`. Landscape was not squashed; it was broken.
+     `.scene` is a size container, so `cqh` is the height that is genuinely
+     left over — measured, in every orientation, with no arithmetic about what
+     else is on screen. `max()` is the floor that stops it reaching zero.
+
+     Whole pixels, deliberately. A fractional tile size puts every tile boundary
      and every sprite on a fractional pixel, and the floors layer — which sits
      under a filter and so rasterises on its own — snaps to the grid while the
      robot and the items above it do not. The result is a drift of up to a pixel
      that changes as he moves. The unrounded value stays as a fallback for
      engines without round(). */
-  --c: min(66px, calc((100vw - 56px) / var(--w)), calc((100dvh - 366px) / var(--h)));
-  --c: round(down, min(66px, calc((100vw - 56px) / var(--w)),
-                       calc((100dvh - 366px) / var(--h))), 1px);
+  --c: max(14px, min(66px, calc((100cqw - 24px) / var(--w)),
+                     calc((100cqh - 16px) / var(--h))));
+  --c: round(down, max(14px, min(66px, calc((100cqw - 24px) / var(--w)),
+                                 calc((100cqh - 16px) / var(--h)))), 1px);
   width: calc(var(--w) * var(--c));
   height: calc(var(--h) * var(--c));
   transform:
@@ -71,11 +89,22 @@
 
 /* Anything that lives at a board coordinate is exactly one tile and is placed
    by --x/--y. Adding a new board element means adding it here — miss it, and it
-   becomes an unpositioned block sized against the whole board. */
+   becomes an unpositioned block sized against the whole board.
+
+   **A percentage, not `* var(--c)`.** Every element here is exactly one tile
+   square, so `100%` of its own box *is* `--c` and it lands in the same place —
+   but the computed value is `600% 100%` rather than `246px 41px`, and that does
+   not change when the tile size does. It matters because `.bot` and `.cat` are
+   the only board elements that *transition* `translate`: written in pixels, a
+   resize changed their translate like any other move, so the room snapped to
+   the new tile size while Robby animated to it — he appeared to teleport one or
+   two tiles and slide back over the next tenth of a second. Measured at 1.39
+   tiles adrift on a 45px→35px change, mid-step. In percentages a resize is not
+   a move, so there is nothing to animate. */
 .tile, .over, .item, .bot, .launchpad, .propcell, .fx {
   position: absolute;
   width: var(--c); height: var(--c);
-  translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c));
+  translate: calc(var(--x) * 100%) calc(var(--y) * 100%);
 }
 .tile::before {
   content: ''; position: absolute;
@@ -291,7 +320,7 @@
   width: var(--c); height: var(--c);
   /* a little down and to the side, so she reads as trailing him rather than
      standing in the same spot when they share a tile */
-  translate: calc((var(--x) + .17) * var(--c)) calc((var(--y) + .21) * var(--c));
+  translate: calc((var(--x) + .17) * 100%) calc((var(--y) + .21) * 100%);
   transition: translate var(--catstep, 380ms) cubic-bezier(.3,.8,.4,1) 90ms;
 }
 /* On a win she stays her own size and stays behind him. They bounce in
@@ -376,7 +405,7 @@
    that direction's colour. Dots made every tile look equally expensive. */
 .plans { z-index: 2; pointer-events: none; }
 .vec { position: absolute; width: var(--c); height: var(--c);
-       translate: calc(var(--x) * var(--c)) calc(var(--y) * var(--c)); }
+       translate: calc(var(--x) * 100%) calc(var(--y) * 100%); }
 .seg {
   position: absolute; left: 50%; top: 50%;
   width: 100%; height: 17%;

@@ -158,7 +158,71 @@ check('camera starts pulled back', $('.board')?.style.getPropertyValue('--z') ==
 // because the floors layer rasterises on its own and snaps to the grid
 check('tiles are a whole number of pixels', /--c:\s*round\(down,/.test(raw))
 check('with a fallback for engines without round()',
-  (raw.match(/--c:\s*min\(66px/g) || []).length >= 1)
+  (raw.match(/--c:\s*max\(14px,\s*min\(66px/g) || []).length >= 1)
+
+/**
+ * The code keeps a copy of how long the camera takes, so that it can schedule
+ * cues clear of the frame it settles on. A copy is only worth having while it
+ * is true, and the original is a CSS transition — so read it back.
+ */
+// the minifier writes 900ms as .9s, so read seconds and convert
+const cameraRules = [...raw.matchAll(/transition:transform ([\d.]+)s cubic-bezier\(\.4,0,\.2,1\)/g)]
+  .map((m) => Math.round(parseFloat(m[1]) * 1000))
+check(`the camera's transitions were found (${cameraRules.length} rules)`, cameraRules.length === 2)
+check(`and both take as long as the code thinks (${cameraRules.length} checked)`,
+  cameraRules.every((ms) => ms === 900))
+
+/**
+ * Everything that stands on a board coordinate is placed by a percentage of its
+ * own tile, never by `--x * var(--c)`.
+ *
+ * The two are the same position, but not the same *value*: `600% 100%` does not
+ * change when the tile size does, and `246px 41px` does. `.bot` and `.cat` are
+ * the only board elements that transition `translate`, so in pixels a resize
+ * looked exactly like a move — the room snapped to the new tile size and Robby
+ * animated to it, appearing to teleport a tile or two and slide back over the
+ * next tenth of a second. Measured at 1.6 tiles adrift on a 45px -> 35px change
+ * mid-step; 0 after.
+ */
+const placers = raw.match(/translate:\s*calc\([^;]*var\(--x\)[^;]*;/g) || []
+check(`board placements were found at all (${placers.length} rules)`, placers.length === 4)
+check(`none of them is in pixels (${placers.length} checked)`,
+  placers.every((r) => r.includes('100%') && !/var\(--x\)[^;]*\*\s*var\(--c\)|var\(--c\)\s*\*/.test(r)))
+
+/**
+ * The board and the editor grid are sized from the box they are standing in,
+ * not from a constant standing in for everything else on screen.
+ *
+ * That constant is why landscape was unplayable: `100dvh - 366px` is 43% of a
+ * tall window and 94% of a short one, and under ~366px of window it went
+ * negative, which is an invalid declaration — the board and every tile in it
+ * fell back to `auto`. This scrapes every rule that defines a tile size and
+ * fails if any of them goes back to subtracting from the viewport.
+ */
+const sizers = raw.match(/--(?:c|gc):\s*round\(down,[^;]+;/g) || []
+check(`tile sizes were found at all (${sizers.length} rules)`, sizers.length === 2)
+check(`no tile size is a guess about the rest of the screen (${sizers.length} checked)`,
+  sizers.every((r) => /100cq[wh]/.test(r) && !/100dvh|100vh|100vw/.test(r)))
+check(`and none of them can reach zero (${sizers.length} checked)`,
+  sizers.every((r) => /max\(\d+px,/.test(r)))
+check('the boxes they measure are size containers',
+  /\.scene\{[^}]*container-type:size/.test(raw) && /\.canvas\{[^}]*container-type:size/.test(raw))
+
+/**
+ * Sideways, the console stands beside the board rather than under it. Nothing
+ * here can be *seen* — jsdom lays nothing out — so this asserts the rule exists
+ * and says what it must say. It catches the rule going away, which is the
+ * regression worth catching; `doc/NOTES.md` carries the thread about what a
+ * check like this cannot do.
+ */
+const sideways = raw.match(/@media[^{]*orientation:landscape[^{]*\{[\s\S]*?\n?/g) || []
+check(`a landscape layout exists at all (${sideways.length} blocks)`, sideways.length === 2)
+check('the console moves to a column of its own', /\.console\{[^}]*grid-column:2/.test(raw))
+check('and so does the editor\'s rail', /\.erail\{[^}]*grid-column:2/.test(raw))
+check('the board keeps the row it is left with',
+  /\.screen\.ingame>\.scene\{grid-column:1;grid-row:2\}/.test(raw))
+check('and the notch is handled on the sides, not just top and bottom',
+  /safe-area-inset-right/.test(raw) && /safe-area-inset-left/.test(raw))
 check('a home button leads back out', !!$('.gamebar .ghostbtn'))
 
 // ---- the thought bubble, at rest ----
@@ -372,7 +436,9 @@ await go(() => $('.room.build').click(), () => !!$('.editor') && !$('.rooms'))
 check('the editor gets the world\'s colours like any other screen',
   /\[data-theme="lab"\]\{--bg/.test(raw) || /\[data-theme=lab\]\{--bg/.test(raw))
 check('the editor opens on a room that already works',
-  $('.verdict b')?.textContent === '1 arrow')
+  $('.egrid .think .par')?.textContent === '1')
+check('and says so in Robby\'s own thought bubble, not in a sentence',
+  !$('.editor .verdict') && !/needs \{|can't get there/.test(raw))
 check('with Robby and a battery already placed',
   !!$('.egrid .bot') && !!$('.egrid .item.k-battery'))
 check('and it can be saved straight away', $('.keep')?.disabled === false)
@@ -386,7 +452,7 @@ check('the hero plays the room being built', $('.editor .play')?.getAttribute('a
 check('and saving is the smaller act beside it', !!$('.keep'))
 check('the palette offers the world\'s pieces',
   $$('.paint').map((p) => p.getAttribute('aria-label')).join() ===
-    'Floor,Wall,Battery,Bridge,Conveyor')
+    'Floor,Wall,Battery,Bridge,Conveyor right')
 check('drawn with the board\'s own tiles, not a set of its own',
   $$('.egrid .tile').length === 7 && !!$('.elayer.floors'))
 check('the grid refuses to pan under a finger', /\.egrid\{[^}]*touch-action:none/.test(raw))
@@ -395,9 +461,72 @@ const eg = $('.egrid')
 eg.setPointerCapture = () => {}
 eg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 360, height: 280 })
 const at = (x, y) => [x * 40 + 20, y * 40 + 20]
+/** press and hold, which is what picks a thing up */
+const hold = async (x, y) => {
+  eg.dispatchEvent(PE('pointerdown', ...at(x, y)))
+  await wait(340)
+}
+
+// ---- the gesture grammar: hold to carry, tap to paint, leave the tile to draw
+//
+// Four gestures and one rule between them: the tool decides whether a tap is a
+// paint or a turn, and only a *hold* picks a thing up.
+const tiles = () => $$('.egrid .tile').length
+const tap = async (x, y) => {
+  eg.dispatchEvent(PE('pointerdown', ...at(x, y)))
+  eg.dispatchEvent(PE('pointerup', ...at(x, y)))
+  await wait(400)
+}
+
+// a tap paints, even on a thing — the brush wins wherever it is not the brush
+// that made what is under the finger
+$$('.paint')[1].click() // wall
+await tap(7, 3)
+check('a tap paints over a thing the chosen tool did not make',
+  $$('.egrid .item.k-battery').length === 0)
+check('and the room says it has nothing to fetch, wordlessly',
+  await until('the bubble', () => !!$('.egrid .think .want') && !$('.egrid .think .par'), 4000, 60))
+
+// leaving the pressed tile draws a trail from it
+$$('.paint')[0].click() // floor
+const before = tiles()
+eg.dispatchEvent(PE('pointerdown', ...at(4, 1)))
+eg.dispatchEvent(PE('pointermove', ...at(5, 1)))
+eg.dispatchEvent(PE('pointermove', ...at(6, 1)))
+eg.dispatchEvent(PE('pointerup', ...at(6, 1)))
+await wait(400)
+check('and leaving the tile it started on draws a trail, the first tile included',
+  tiles() === before + 3)
+
+// the outer ring is ground like any other: it used to be an inert border, and
+// nothing on screen said so
+await tap(0, 0)
+check('and the outermost ring paints too, where it used to be an inert border',
+  tiles() === before + 4)
+$('.roomsbar [aria-label="undo"]').click()
+await wait(400)
+
+// put the battery back with the object tool, which is what it is now
+$$('.paint')[2].click()
+await tap(7, 3)
+check('the object tool puts one back', $$('.egrid .item.k-battery').length === 1)
+check('and the answer comes back with it',
+  await until('an answer', () => $('.egrid .think .par')?.textContent === '1', 5000, 60))
+
+// the floor under Robby is floor: paint it and he is standing on a wall
+$$('.paint')[1].click() // wall
+await tap(1, 3)
+check('the floor under Robby paints like any other floor', !!$('.egrid .bot'))
+check('and the bubble says he is not standing on anything',
+  await until('the ground mark', () => !!$('.egrid .think .want.ground'), 4000, 60))
+$('.roomsbar [aria-label="undo"]').click()
+await wait(400)
 
 // carried off the edge of the room and let go: gone
-eg.dispatchEvent(PE('pointerdown', ...at(7, 3)))
+$$('.paint')[2].click() // the object tool, so the battery is the tool's own
+await hold(7, 3)
+check('holding a thing picks it up, and it rides under the finger',
+  !!$('.egrid .item.k-battery.carried'))
 eg.dispatchEvent(PE('pointermove', 400, 140))
 await wait(80)
 check('carrying a piece past the edge offers to throw it away',
@@ -406,24 +535,47 @@ eg.dispatchEvent(PE('pointerup', 400, 140))
 check('and letting go there removes it',
   await until('the battery to go', () => $$('.egrid .item.k-battery').length === 0, 4000, 60))
 
-// a conveyor turns on the spot rather than needing four buttons
+// a conveyor turns on the spot — but only under the tool that made it
 $$('.paint')[4].click()
-eg.dispatchEvent(PE('pointerdown', ...at(5, 3)))
-eg.dispatchEvent(PE('pointerup', ...at(5, 3)))
-await wait(400)
+await tap(5, 3)
 const spin = () => $('.egrid .beltwrap')?.style.getPropertyValue('--spin')
 check('conveyors can be painted', spin() === '0deg')
-eg.dispatchEvent(PE('pointerdown', ...at(5, 3)))
-eg.dispatchEvent(PE('pointerup', ...at(5, 3)))
-await wait(400)
+await tap(5, 3)
 check('and tapping one turns it', spin() === '90deg')
+$$('.paint')[0].click() // floor
+await tap(5, 3)
+check('but under any other tool a tap paints over it instead of turning it',
+  !$('.egrid .beltwrap'))
 
-// put the battery back and save
+// a tool tile that is already chosen cycles what it lays down
+$$('.paint')[4].click()
+check('the conveyor tool starts pointing the way it paints',
+  $$('.paint')[4].getAttribute('aria-label') === 'Conveyor right')
+$$('.paint')[4].click()
+await wait(80)
+check('and tapping it again turns it, so a belt is aimed before it is painted',
+  $$('.paint')[4].getAttribute('aria-label') === 'Conveyor down')
 $$('.paint')[2].click()
-eg.dispatchEvent(PE('pointerdown', ...at(7, 3)))
-eg.dispatchEvent(PE('pointerup', ...at(7, 3)))
+$$('.paint')[2].click()
+await wait(80)
+check('the object tool walks the parts the same way',
+  $$('.paint')[2].getAttribute('aria-label') === 'Cog')
+for (let i = 0; i < 3; i++) $$('.paint')[2].click()
+await wait(80)
+check('and out to the rocket, which is how a built room asks for an errand',
+  $$('.paint')[2].getAttribute('aria-label') === 'Rocket')
+await tap(4, 3)
+check('so a rocket can be placed in a room a child built', !!$('.egrid .launchpad'))
+$('.roomsbar [aria-label="undo"]').click()
+await wait(400)
+
+// round the ring to the battery again, put it back, and save
+$$('.paint')[2].click()
+await wait(80)
+check('and round again to the battery', $$('.paint')[2].getAttribute('aria-label') === 'Battery')
+await tap(7, 3)
 check('the solver answers as you build',
-  await until('an answer', () => /arrow/.test($('.verdict b')?.textContent ?? ''), 5000, 60))
+  await until('an answer', () => !!$('.egrid .think .par'), 5000, 60))
 check('and draws the answer on the room', $$('.routedot').length > 0)
 
 $('.keep').click()
@@ -481,13 +633,49 @@ check('no clipping rule targets the console tray or its tokens',
 // the stylesheet only: the bundle below it is full of things that look like
 // selectors to a regex and are not
 const sheet = raw.slice(raw.search(/<style[^>]*>/), raw.indexOf('</style>'))
-const rules = [...sheet.matchAll(/(?:^|[{}])\s*([.#][^{}@]{2,90}?)\{/g)]
-  .map((m) => m[1].replace(/\s+/g, ' ').trim())
-  .filter((sel) => !sel.includes(':'))
-const repeated = [...new Set(rules.filter((sel, i) => rules.indexOf(sel) !== i))]
+
+/**
+ * Cut the sheet into scopes — the top level, and each `@media` body — because
+ * *within* one scope a repeated selector is the fault above, and *across* two
+ * it is the whole point of a media query. Read flat, the landscape layout
+ * looked like eight stale blocks.
+ */
+function scopes(css) {
+  const inner = []
+  let top = ''
+  for (let i = 0; i < css.length; ) {
+    if (!css.startsWith('@media', i)) { top += css[i++]; continue }
+    const open = css.indexOf('{', i)
+    let depth = 1
+    let j = open + 1
+    while (j < css.length && depth) {
+      if (css[j] === '{') depth++
+      else if (css[j] === '}') depth--
+      j++
+    }
+    inner.push(css.slice(open + 1, j - 1))
+    i = j
+  }
+  return [top, ...inner]
+}
+
+const selectorsIn = (css) =>
+  [...css.matchAll(/(?:^|[{}])\s*([.#][^{}@]{2,90}?)\{/g)]
+    .map((m) => m[1].replace(/\s+/g, ' ').trim())
+    .filter((sel) => !sel.includes(':'))
+
+const cuts = scopes(sheet)
+const rules = cuts.flatMap(selectorsIn)
+const repeated = [...new Set(
+  cuts.flatMap((cut) => {
+    const sels = selectorsIn(cut)
+    return sels.filter((sel, i) => sels.indexOf(sel) !== i)
+  }),
+)]
 // a check that finds nothing is worse than no check
 check('the stylesheet was actually found', rules.length > 200)
-check(`no selector is defined twice (${rules.length} rules)`, repeated.length === 0)
+check(`its media queries were found too (${cuts.length - 1} of them)`, cuts.length - 1 === 3)
+check(`no selector is defined twice in one scope (${rules.length} rules)`, repeated.length === 0)
 if (repeated.length) console.log('     defined twice:', repeated.slice(0, 8).join(' | '))
 
 /**

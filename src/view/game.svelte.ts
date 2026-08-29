@@ -1,6 +1,6 @@
 import { initialState, simulate } from '../engine/simulate'
 import { chapters } from '../engine/levels'
-import { playable, type Draft, type SavedRoom } from '../engine/editor'
+import { draftFrom, playable, type Draft, type SavedRoom } from '../engine/editor'
 import { canGenerate, generateFor } from '../engine/generate'
 import { around, spend, type Chapter, type Dir, type FrameEvent, type Level } from '../engine/types'
 import { sfx } from './audio'
@@ -16,12 +16,73 @@ export const DUR: Record<FrameEvent, number> = {
   // changes in his favour, and the bubble ticking over is worth watching.
   // Carry is quicker than a step: he is not walking, he is being whisked along,
   // and the speed is what makes the belt feel like a free ride.
-  step: 380, carry: 210, pickup: 1150, gate: 520, collapse: 480,
+  // Denied is the rocket turning him away: long enough for one full shudder of
+  // `.think.short` / `.launchpad.short`, which used to be cut off mid-shake
+  // because arriving short was an ordinary 380ms step.
+  step: 380, carry: 210, pickup: 1150, gate: 520, collapse: 480, denied: 900,
   bonk: 980, shrug: 1000, stranded: 1200, win: 2600,
+}
+
+/** Reduced motion holds every frame for the same short beat. */
+const REDUCED_HOLD = 240
+export const holdMs = (e: FrameEvent, reduce = false) => (reduce ? REDUCED_HOLD : DUR[e])
+
+/**
+ * How long the *walk* takes — which is not how long the frame is held, and used
+ * to be, because one number did both jobs.
+ *
+ * Two things went wrong with that, and they compound.
+ *
+ * **A held frame was spent walking.** Held frames exist so that something can be
+ * *watched*: the bubble ticking a part off, the rocket shuddering him away. With
+ * one number he never stood still to be watched — he crawled into the battery
+ * over 1150ms, decelerating the whole way, then snapped into the next move. In
+ * the Lab finale that next move doubles back the way he came.
+ *
+ * **And an ordinary step was a race.** The walk was 380ms and the frame was held
+ * 380ms, so the CSS transition ended at the very instant it was retriggered.
+ * Which side won came down to timer jitter, and on a long straight run — four
+ * tiles bought by one instruction, no pause between them — it was re-run every
+ * frame. An interrupted `translate` transition that restarts from where it began
+ * is drawn a tile back and then snaps forward. Under `prefers-reduced-motion` it
+ * was not even a race: the walk was longer than the hold, always.
+ *
+ * So the rule is now stated rather than hoped for: **the walk always finishes
+ * before the frame does.** He arrives, settles, and then sets off again.
+ */
+export const walkMs = (e: FrameEvent, reduce = false) => {
+  const hold = holdMs(e, reduce)
+  // a belt is quicker than a walk: he is not walking, he is being whisked along
+  return Math.min(e === 'carry' ? 180 : 340, Math.round(hold * 0.9))
 }
 
 /** The robot walking itself back to the start after a failure. */
 const RETURN_MS = 820
+
+/**
+ * How long the camera takes to push in on a win or pull back into a new room.
+ *
+ * It is a CSS transition — on `.board` and on `.decor` — and this is the code's
+ * copy of that number, kept honest by a smoke check that reads it back out of
+ * the stylesheet. It exists so that the rule below can be stated.
+ */
+export const CAMERA_MS = 900
+
+/**
+ * When to fire something that costs a frame, given the camera is moving.
+ *
+ * **Never at the moment it settles.** The rocket's cue used to be scheduled at
+ * 900ms, which was the camera's duration to the millisecond: every win on a
+ * rocket room built three oscillators on the exact frame the push-in came to
+ * rest. A scale animation is already at its most expensive as it settles — the
+ * browser re-rasterises the scaled content — and dropping audio synthesis on top
+ * of that frame is what a stutter at the end of a zoom is made of.
+ *
+ * This is the same mistake as the walk that ended when its own frame was
+ * retriggered, one layer up: two clocks written as the same constant, colliding
+ * because nothing said they must not (`doc/META.md`).
+ */
+export const afterCamera = (gap = 260) => CAMERA_MS + gap
 
 export const CHAPTERS = chapters
 export type Screen = 'menu' | 'rooms' | 'play' | 'store' | 'editor' | 'intro'
@@ -116,7 +177,9 @@ export function createGame() {
     const room = rooms.find((r) => r.id === id)
     if (!room) return
     editingId = id
-    editDraft = { theme: room.theme, name: room.name, cells: room.map.map((r) => r.split('')) }
+    // through `draftFrom`, which lifts Robby out of the characters — and which
+    // brings the room's tray with it. Written out by hand here, it did not.
+    editDraft = draftFrom(room.map, { theme: room.theme, name: room.name, tray: room.tray })
     goTo('editor')
   }
 
@@ -163,7 +226,10 @@ export function createGame() {
   /** True from the first frame of the celebration, not after it. */
   const celebrating = $derived(frame?.event === 'win')
   const won = $derived(celebrating || (!running && playhead >= 0 && trace.outcome === 'win'))
-  const stepMs = $derived(returning ? RETURN_MS : frame ? DUR[frame.event] : 380)
+  // `--step` drives the robot's translate, so it is the *walk*, not the hold
+  const stepMs = $derived(
+    returning ? RETURN_MS : frame ? walkMs(frame.event, reduced()) : 340,
+  )
   const lastOfChapter = $derived(li === chapter.levels.length - 1)
   /**
    * Where a finished world hands over to. Never into rooms a child built —
@@ -497,11 +563,12 @@ export function createGame() {
     cue ? cue() : sfx.step()
     if (f.event === 'win') {
       award()
-      if (level.goal.type === 'exit') setTimeout(() => sfx.launch(), 900)
+      // clear of the camera settling — see `afterCamera`
+      if (level.goal.type === 'exit') setTimeout(() => sfx.launch(), afterCamera())
       zoom = 2 // push in on the celebration
       focus = { ...f.state.pos }
     }
-    timer = setTimeout(tick, reduced() ? 240 : DUR[f.event])
+    timer = setTimeout(tick, holdMs(f.event, reduced()))
   }
 
   function play() {

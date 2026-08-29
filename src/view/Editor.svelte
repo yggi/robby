@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { glyphFor } from '../engine/legend'
   import { parseMap } from '../engine/parse'
   import {
-    assess, discard, grab, height, inside, move, paint, removable, rotate, starterDraft,
-    draftMap, width, type Brush, type Draft, type Verdict,
+    assess, cellAt, cycle, discard, draftMap, grab, height, isStart, move, owns, paint,
+    removable, rotate, starterDraft, width, BELTS, OBJECTS, ROCKET, rotated, nextObject,
+    type Brush, type Draft, type Verdict,
   } from '../engine/editor'
   import { DIRS, posKey, spend, THEMES, type Dir, type Theme } from '../engine/types'
   import { sfx } from './audio'
@@ -11,13 +13,22 @@
   import { DECOR } from './decor'
   import type { Game } from './game.svelte'
   import { geom } from './geom'
-  import { arrow, BACK_ICON, BATT_SVG, BOT_SVG, STRANDS_SVG } from './icons'
+  import {
+    arrow, BACK_ICON, BATT_SVG, BOT_SVG, itemIcon, ROCKET_SVG, STRANDS_SVG,
+  } from './icons'
 
   let { g }: { g: Game } = $props()
 
   let draft = $state<Draft>(g.editDraft ?? starterDraft('lab'))
   let past = $state<Draft[]>([])
   let brush = $state<Brush>('floor')
+  /**
+   * What the two brushes that carry a setting will lay down next. Tapping a
+   * tool tile that is already chosen walks its ring — so a north-running belt
+   * is chosen before it is painted, rather than painted east and turned three
+   * times, and the rocket is reachable from the same button as the battery.
+   */
+  let kind = $state<Record<'object' | 'belt', string>>({ object: OBJECTS[0], belt: BELTS[0] })
   let gridEl: HTMLDivElement
 
   let verdict = $state<Verdict>(assess(draft))
@@ -27,13 +38,39 @@
   const H = $derived(height(draft))
   const decor = $derived(DECOR[draft.theme]())
 
+  /* ── one gesture: hold to pick a thing up, tap to paint, drag to draw ── */
+  let carrying = $state<{ ch: string; from: [number, number] } | null>(null)
+  let hover = $state<[number, number] | null>(null)
+  let pressed = $state<[number, number] | null>(null)
+  let painting = false
+  let holding: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Long enough that drawing a line never lifts a piece by accident, short
+   * enough that a hold does not feel like a wait. The piece lifts visibly the
+   * moment it fires, which is what makes a hold legible without a word.
+   */
+  const HOLD_MS = 260
+
+  /**
+   * What the room looks like *right now*, mid-gesture: the draft with whatever
+   * is being carried already at the finger — or already gone, when the finger
+   * is off the edge. Done by running the same `move`/`discard` the release will
+   * run, so the drag is a preview of its own outcome rather than a second
+   * rendering path that has to agree with the first.
+   */
+  const shown = $derived.by(() => {
+    if (!carrying) return draft
+    return hover ? move(draft, carrying.from, hover) : discard(draft, carrying.from)
+  })
+
   /**
    * The grid is drawn with the board's own tiles rather than a set of its own:
    * same neighbour-aware geometry, same ribbon, same theme. A room therefore
    * looks in the editor exactly as it will look played, and a new world's
    * palette reaches the editor without anyone remembering to bring it.
    */
-  const parsed = $derived(parseMap(draftMap(draft)))
+  const parsed = $derived(parseMap(draftMap(shown)))
   const world = $derived(parsed.world)
   /** Where the pieces are, read off the parsed world rather than off the raw
       characters — the markup below used to test `ch === '*'` and `ch === 'R'`,
@@ -50,13 +87,15 @@
           kind: cell.kind,
           dir: cell.dir ?? null,
           item: held.get(posKey({ x, y })) ?? null,
-          start: parsed.start.x === x && parsed.start.y === y,
+          start: isStart(shown, x, y),
           ...geom(world, x, y),
         })
       }
     return out
   })
   const route = $derived(verdict.status === 'ok' ? new Set(verdict.route) : new Set<string>())
+  /** the cell the finger is on while something is being carried */
+  const lifted = $derived(carrying && hover ? posKey({ x: hover[0], y: hover[1] }) : null)
 
   /** Solved on every finished stroke, never during one. */
   async function reassess() {
@@ -80,65 +119,89 @@
     reassess()
   }
 
-  /* ── one gesture: press a piece to carry it, press ground to paint ── */
-  let carrying = $state<{ ch: string; from: [number, number] } | null>(null)
-  let hover = $state<[number, number] | null>(null)
-  let painting = false
-  let moved = false
-
-  function cellAt(e: PointerEvent): [number, number] | null {
+  function cellAtPointer(e: PointerEvent): [number, number] | null {
     const r = gridEl.getBoundingClientRect()
     const x = Math.floor(((e.clientX - r.left) / r.width) * W)
     const y = Math.floor(((e.clientY - r.top) / r.height) * H)
     return x >= 0 && y >= 0 && x < W && y < H ? [x, y] : null
   }
 
+  const clearHold = () => {
+    if (holding) clearTimeout(holding)
+    holding = null
+  }
+
+  /** Lay a brush stroke on one cell. */
+  const stroke = (cell: [number, number]) =>
+    commit(paint(draft, cell[0], cell[1], brush, kind[brush as 'object' | 'belt']))
+
+  /**
+   * Press decides nothing yet.
+   *
+   * Three things can follow, and which one it was is only knowable later: the
+   * finger leaves the tile (a trail), the finger stays put long enough (pick
+   * the thing up), or the finger lifts (a tap, which paints — or cycles, when
+   * the tool is the one that made what is under it).
+   */
   function down(e: PointerEvent) {
-    const cell = cellAt(e)
+    const cell = cellAtPointer(e)
     if (!cell) return
     gridEl.setPointerCapture(e.pointerId)
-    moved = false
-    const held = grab(draft, cell[0], cell[1])
-    if (held) {
-      carrying = { ch: held, from: cell }
+    pressed = cell
+    const thing = grab(draft, cell[0], cell[1])
+    if (!thing) return
+    holding = setTimeout(() => {
+      holding = null
+      pressed = null
+      carrying = { ch: thing, from: cell }
       hover = cell
       sfx.token('up')
-    } else {
-      painting = true
-      commit(paint(draft, cell[0], cell[1], brush))
-    }
+    }, HOLD_MS)
   }
 
   function drag(e: PointerEvent) {
-    const cell = cellAt(e)
+    const cell = cellAtPointer(e)
     if (carrying) {
-      if (cell && (cell[0] !== carrying.from[0] || cell[1] !== carrying.from[1])) moved = true
       hover = cell // null once the finger leaves the room, which means "drop it"
-    } else if (painting && cell) {
-      commit(paint(draft, cell[0], cell[1], brush))
+      return
     }
+    if (!cell) return
+    if (pressed && (cell[0] !== pressed[0] || cell[1] !== pressed[1])) {
+      // the finger left the tile it started on: this is a stroke, not a tap
+      clearHold()
+      painting = true
+      stroke(pressed)
+      pressed = null
+    }
+    if (painting) stroke(cell)
   }
 
   function up() {
+    clearHold()
     if (carrying) {
       if (!hover && removable(carrying.ch)) {
         // carried off the edge of the room and let go
         commit(discard(draft, carrying.from))
         sfx.remove()
-      } else if (hover && moved) {
+      } else if (hover) {
         commit(move(draft, carrying.from, hover))
         sfx.press()
-      } else if (hover) {
-        // a tap rather than a drag: turn a conveyor on the spot
-        const turned = rotate(draft, carrying.from[0], carrying.from[1])
-        if (turned !== draft) {
-          commit(turned)
-          sfx.token('right')
-        }
+      }
+    } else if (pressed) {
+      // a tap. The tool that made what is under the finger turns it; any other
+      // tool paints over it, and so does a tap on bare ground.
+      const [x, y] = pressed
+      const there = cellAt(draft, x, y)
+      if (owns(brush, there)) {
+        commit(brush === 'belt' ? rotate(draft, x, y) : cycle(draft, x, y))
+        sfx.token('right')
+      } else {
+        stroke(pressed)
       }
     }
     carrying = null
     hover = null
+    pressed = null
     painting = false
     reassess()
   }
@@ -185,10 +248,40 @@
   const PAINTS: { brush: Brush; label: string }[] = [
     { brush: 'floor', label: 'Floor' },
     { brush: 'wall', label: 'Wall' },
-    { brush: 'battery', label: 'Battery' },
+    { brush: 'object', label: 'Battery' },
     { brush: 'fragile', label: 'Bridge' },
     { brush: 'belt', label: 'Conveyor' },
   ]
+  /**
+   * What the two settable tools currently show, asked of the legend rather than
+   * tabulated again here — a second table of what `@` or `S` means is exactly
+   * what `legend.ts` was written to end.
+   */
+  const objectIcon = $derived(
+    kind.object === ROCKET
+      ? ROCKET_SVG(g.kit)
+      : itemIcon(glyphFor(kind.object)?.item ?? 'battery'),
+  )
+  const beltAngle = $derived(DIR_ANGLE[glyphFor(kind.belt)?.dir ?? 'right'])
+  const NAMES: Record<string, string> = {
+    '*': 'Battery', c: 'Cog', s: 'Coil', x: 'Core', '@': 'Rocket',
+    E: 'Conveyor right', S: 'Conveyor down', W: 'Conveyor left', N: 'Conveyor up',
+  }
+  const labelOf = (p: { brush: Brush; label: string }) =>
+    p.brush === 'object' || p.brush === 'belt' ? NAMES[kind[p.brush]] ?? p.label : p.label
+
+  /** Choosing a tool, or — when it is already chosen — walking its ring. */
+  function pickTool(b: Brush) {
+    if (brush !== b) {
+      brush = b
+      sfx.select()
+      return
+    }
+    if (b === 'object') kind = { ...kind, object: nextObject(kind.object) }
+    else if (b === 'belt') kind = { ...kind, belt: rotated(kind.belt) }
+    else return
+    sfx.token('right')
+  }
 </script>
 
 <div class="editor" data-theme={draft.theme}>
@@ -244,8 +337,7 @@
 
       <div class="elayer">
         {#each cells as c (c.key)}
-          <div class="over {c.ori}" class:lifted={!!carrying && carrying.from[0] === c.x && carrying.from[1] === c.y}
-               class:target={!!hover && hover[0] === c.x && hover[1] === c.y}
+          <div class="over {c.ori}"
                style="--x:{c.x}; --y:{c.y}; --in:{c.in}; --rad:{c.rad}">
             {#if c.kind === 'belt'}
               <span class="beltwrap" style="--spin:{DIR_ANGLE[c.dir ?? 'right']}deg">
@@ -258,83 +350,108 @@
           </div>
         {/each}
 
-        {#each cells.filter((c) => c.item === 'battery') as c (c.key)}
-          <div class="item {kindCls('battery')}" style="--x:{c.x}; --y:{c.y}">
-            <span class="cellwrap">{@html BATT_SVG}</span>
+        <!-- the rocket, drawn with the board's own launchpad so a built errand
+             room looks exactly like the world it was learned in -->
+        {#each cells.filter((c) => c.kind === 'exit') as c (c.key)}
+          <div class="launchpad" class:carried={lifted === c.key} style="--x:{c.x}; --y:{c.y}">
+            <span class="pad"></span>
+            {@html ROCKET_SVG(g.kit)}
           </div>
         {/each}
+
+        {#each cells.filter((c) => c.item) as c (c.key)}
+          <div class="item {kindCls(c.item ?? 'battery')}" class:carried={lifted === c.key}
+               style="--x:{c.x}; --y:{c.y}">
+            <span class="cellwrap">{@html itemIcon(c.item ?? 'battery')}</span>
+          </div>
+        {/each}
+
         {#each cells.filter((c) => c.start) as c (c.key)}
-          <div class="bot flat on" style="--x:{c.x}; --y:{c.y}">{@html BOT_SVG(g.kit)}</div>
+          <div class="bot flat on" class:carried={lifted === c.key}
+               style="--x:{c.x}; --y:{c.y}">
+            {@html BOT_SVG(g.kit)}
+            <!-- The verdict, in his own thought bubble rather than a sentence
+                 under the grid. Same bubble, same slots and same colours as the
+                 one he thinks in while a room is being played — a room that is
+                 not finished is him wanting something, which is a thing he
+                 already knows how to say without a word of text. -->
+            <span class="think" class:good={!thinking && verdict.status === 'ok'}>
+              {#if thinking}
+                <span class="gearspin"><i></i><i></i><i></i></span>
+              {:else if verdict.status === 'target'}
+                <i class="want">{@html BATT_SVG}</i>
+              {:else if verdict.status === 'ground'}
+                <i class="want ground"></i>
+              {:else if verdict.status === 'nopath'}
+                <i class="want lost">?</i>
+              {:else}
+                <i class="want lit">{@html arrow('right')}</i>
+                <b class="par">{verdict.par.length}</b>
+              {/if}
+            </span>
+          </div>
         {/each}
       </div>
     </div>
   </div>
 
-  <!-- the verdict, live. No validate button: if it solves, it is playable. -->
-  <div class="verdict" class:good={verdict.status === 'ok'}>
-    {#if thinking}
-      <span class="gearspin"></span><b>thinking</b>
-    {:else if verdict.status === 'empty'}
-      <b>needs {verdict.needs.join(' and ')}</b>
-    {:else if verdict.status === 'unreachable'}
-      <b>Robby can't get there</b>
-    {:else}
-      <b>{verdict.par.length} {verdict.par.length === 1 ? 'arrow' : 'arrows'}</b>
-      <span class="dots">{'·'.repeat(Math.min(verdict.par.length, 12))}</span>
+  <!-- in landscape these three become a rail beside the grid; in portrait
+       `display: contents` leaves them exactly the rows they have always been -->
+  <div class="erail">
+    {#if verdict.status === 'ok'}
+      <!-- the tray the player will get, and how tight to make it -->
+      <div class="trayedit">
+        {#each DIRS as d (d)}
+          <div class="trayslot">
+            <button aria-label="fewer {d}" disabled={!floor || trayOf(d) <= floor[d]}
+                    onclick={() => nudge(d, -1)}>−</button>
+            <span class="cnt">{@html arrow(d)}<b>{trayOf(d)}</b></span>
+            <button aria-label="more {d}" disabled={trayOf(d) >= 9}
+                    onclick={() => nudge(d, 1)}>+</button>
+          </div>
+        {/each}
+      </div>
     {/if}
-  </div>
 
-  {#if verdict.status === 'ok'}
-    <!-- the tray the player will get, and how tight to make it -->
-    <div class="trayedit">
-      {#each DIRS as d (d)}
-        <div class="trayslot">
-          <button aria-label="fewer {d}" disabled={!floor || trayOf(d) <= floor[d]}
-                  onclick={() => nudge(d, -1)}>−</button>
-          <span class="cnt">{@html arrow(d)}<b>{trayOf(d)}</b></span>
-          <button aria-label="more {d}" disabled={trayOf(d) >= 9}
-                  onclick={() => nudge(d, 1)}>+</button>
-        </div>
+    <div class="tools">
+      <div class="paints">
+        {#each PAINTS as p (p.brush)}
+          <!-- a brush is a cell kind, so its class goes through `kindCls` like
+               every other one: `.wall {}` written for anything else must never
+               be able to reach the palette -->
+          <button class="paint {kindCls(p.brush)}" class:on={brush === p.brush}
+                  aria-label={labelOf(p)} onclick={() => pickTool(p.brush)}>
+            {#if p.brush === 'object'}
+              <span class="swatch batt">{@html objectIcon}</span>
+            {:else if p.brush === 'fragile'}
+              <span class="swatch span">{@html STRANDS_SVG}</span>
+            {:else if p.brush === 'belt'}
+              <span class="swatch {kindCls('belt')}" style="--spin:{beltAngle}deg">
+                <i></i><i></i><i></i>
+              </span>
+            {:else}
+              <span class="swatch {kindCls(p.brush)}"></span>
+            {/if}
+          </button>
+        {/each}
+      </div>
+      <!-- the hero is Play here as everywhere else; saving is the smaller act -->
+      <button class="play" disabled={verdict.status !== 'ok'} aria-label="try this room"
+              onclick={tryIt}>
+        <svg viewBox="0 0 24 24"><path d="M8 4.5 L19.5 12 L8 19.5 Z"/></svg>
+      </button>
+      <button class="keep" disabled={verdict.status !== 'ok'} aria-label="save room"
+              onclick={save}>
+        <svg viewBox="0 0 24 24"><path d="M5 12.5 L10 17.5 L19.5 7" fill="none"
+          stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="themepick">
+      {#each THEMES.slice(0, 5) as t (t)}
+        <button class="tchip" class:on={draft.theme === t} data-theme={t}
+                aria-label={t} onclick={() => pickTheme(t)}></button>
       {/each}
     </div>
-  {/if}
-
-  <div class="tools">
-    <div class="paints">
-      {#each PAINTS as p (p.brush)}
-        <!-- a brush is a cell kind, so its class goes through `kindCls` like
-             every other one: `.wall {}` written for anything else must never
-             be able to reach the palette -->
-        <button class="paint {kindCls(p.brush)}" class:on={brush === p.brush}
-                aria-label={p.label} onclick={() => (brush = p.brush)}>
-          {#if p.brush === 'battery'}
-            <span class="swatch batt">{@html BATT_SVG}</span>
-          {:else if p.brush === 'fragile'}
-            <span class="swatch span">{@html STRANDS_SVG}</span>
-          {:else if p.brush === 'belt'}
-            <span class="swatch {kindCls('belt')}"><i></i><i></i><i></i></span>
-          {:else}
-            <span class="swatch {kindCls(p.brush)}"></span>
-          {/if}
-        </button>
-      {/each}
-    </div>
-    <!-- the hero is Play here as everywhere else; saving is the smaller act -->
-    <button class="play" disabled={verdict.status !== 'ok'} aria-label="try this room"
-            onclick={tryIt}>
-      <svg viewBox="0 0 24 24"><path d="M8 4.5 L19.5 12 L8 19.5 Z"/></svg>
-    </button>
-    <button class="keep" disabled={verdict.status !== 'ok'} aria-label="save room"
-            onclick={save}>
-      <svg viewBox="0 0 24 24"><path d="M5 12.5 L10 17.5 L19.5 7" fill="none"
-        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-  </div>
-
-  <div class="themepick">
-    {#each THEMES.slice(0, 5) as t (t)}
-      <button class="tchip" class:on={draft.theme === t} data-theme={t}
-              aria-label={t} onclick={() => pickTheme(t)}></button>
-    {/each}
   </div>
 </div>

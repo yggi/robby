@@ -32,6 +32,27 @@ guesses. All three were watched in the hands of a five-year-old and none of them
 needs revisiting on current evidence
 ([`../game/playtest.md`](../game/playtest.md)).
 
+## The walk and the hold are two clocks
+
+`DUR` is how long a frame is **held**; `walkMs` is how long the robot takes to
+**cross a tile**. They were one number, and it cost two things.
+
+A frame held so that something could be *watched* spent that time on the
+movement instead: he crawled into the battery over 1150ms and never once stood
+on it. Held frames exist so the bubble ticking a part off, or the rocket
+shuddering him away, can be seen — which needs him standing still.
+
+And an ordinary step was a **race**: the walk was 380ms and the frame was held
+380ms, so the transition ended at the instant it was retriggered. On a straight
+run — four tiles bought by one instruction, no pause between them — that race
+runs every frame, and a transition that loses it restarts from where it began,
+which is drawn a tile back and then snapped forward.
+
+So the rule is stated rather than hoped for: **the walk always finishes before
+the frame does**, reduced motion included, where the walk used to be longer than
+the hold and so lost every time. A belt is the one thing quicker than a walk,
+because he is not walking, he is being carried.
+
 ## The camera is punctuation
 
 Winning **pushes in** on the celebration. Pressing Next swaps the level *inside*
